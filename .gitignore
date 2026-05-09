@@ -1,0 +1,8 @@
+node_modules/
+.next/
+out/
+dist/
+tsconfig.tsbuildinfo
+screenshot-*.png
+*.log
+.DS_Store
