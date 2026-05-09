@@ -25,10 +25,10 @@ src/
 │   └── globals.css   # Tailwind directives + body base style
 ├── components/
 │   ├── Garden.tsx       # 6×5 soil grid (30 slots), shows Plant objects
-│   ├── Plant.tsx        # 6 inline emoji plant stages (Семя → Цветущий)
-│   ├── HabitList.tsx    # habit rows with complete (+10 XP) / delete buttons
+│   ├── Plant.tsx        # 6 stages: sprites from /trees/ (next/image), emoji fallback
+│   ├── HabitList.tsx    # habit rows with complete (+10 XP + 10 💎) / delete buttons
 │   ├── AddHabitForm.tsx # inline form with validation, max 40 chars
-│   ├── Shop.tsx         # buy plants (3 variants) for 50 XP each
+│   ├── Shop.tsx         # buy plants (TREE_VARIANTS) for 50 💎, shows 10.png preview
 │   ├── InventoryStrip.tsx # bar under garden: bought plants → click to plant
 │   ├── XPBar.tsx        # level badge + XP progress bar
 │   └── Confetti.tsx     # particle overlay on level-up
@@ -36,15 +36,19 @@ src/
 │   └── useGameState.ts  # single state hook: habits, plants, inventory, XP, level, localStorage
 └── lib/
     ├── types.ts      # Habit, Plant, GameState + constants
-    ├── gameLogic.ts  # getXPForLevel, addXP, getPlantStage (time-based + upgrades)
+    ├── gameLogic.ts  # getXPForLevel, addXP, getPlantStage, getPlantProgress, getPlantSpriteSrc
     ├── storage.ts    # save/load/clear localStorage under key "habbittodo_save"
     └── sound.ts      # Web Audio API sounds: plant, complete, delete, levelUp
+public/
+└── trees/
+    ├── tree_1/       # 10 sprite PNGs (1.png–10.png)
+    └── tree_2/       # 10 sprite PNGs
 ```
 
 ## Game mechanics
 
 - **Habit**: just a task — name, completions count. No plant attached. MAX_HABITS=50.
-- **Plant**: bought in Shop (50 💎), stored in inventory, then planted into a garden slot (0–29). Has `variant` (0–2), `color`, `plantedAt` timestamp, `upgrades` (0–3).
+- **Plant**: bought in Shop (50 💎), stored in inventory, then planted into a garden slot (0–29). Has `variant` (string, folder name like "tree_1"), `color`, `plantedAt` timestamp, `upgrades` (0–3).
 - **Growth**: time-based for stages 0→1 (2h) and 1→2 (6h). Stages 2→3, 3→4, 4→5 require crystal upgrades (30 💎 each). `effectiveStage = min(2, timeStage) + upgrades`.
 - **XP vs Crystals**: XP levels up (level*100). Crystals (💎) are the currency for buying/upgrading plants. +10 XP + 10 💎 per habit completion.
 - **Refund**: deleting a plant returns full crystal cost (50 + upgrades*30 💎).
@@ -68,3 +72,15 @@ src/
 - `floatTexts`/`showFloat` in the hook are unused dead code.
 - Old localStorage saves are auto-migrated: habits with `plantVariant` → new `Habit[]` + `Plant[]` + `inventory`.
 - `screenshot-*.png` files are gitignored.
+
+## Sprites
+
+- Plant sprites live in `public/trees/{variant}/`. Each folder has 10 PNGs.
+- `TREE_VARIANTS` in types.ts lists available variant folder names.
+- `getPlantSpriteSrc(plant)` maps stage + progress → `/trees/{variant}/{1-10}.png`.
+- Sprite mapping: stages 0–2 get 2 frames each (early/late by timer progress), stages 3–4 get 1 frame, stage 5 gets 1.
+- Shop shows `10.png` (final stage) as preview. Inventory shows `1.png` (seed).
+
+## ESLint
+
+- Pinned to eslint@8.57.1 + eslint-config-next@14 — do NOT upgrade to eslint 9, Next.js 14 is incompatible.
