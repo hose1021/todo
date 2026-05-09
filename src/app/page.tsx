@@ -14,6 +14,7 @@ export default function Home() {
   const {
     xp,
     level,
+    crystals,
     habits,
     plants,
     inventory,
@@ -31,7 +32,9 @@ export default function Home() {
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [plantingMode, setPlantingMode] = useState(false);
-  const [selectedInventoryPlantId, setSelectedInventoryPlantId] = useState<string | null>(null);
+  const [selectedInventoryPlantId, setSelectedInventoryPlantId] = useState<
+    string | null
+  >(null);
 
   if (!loaded) {
     return (
@@ -63,13 +66,35 @@ export default function Home() {
               тёмная сетка привычек
             </p>
           </div>
-          <div className="w-[190px] sm:w-[280px]">
-            <XPBar xp={xp} level={level} />
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 rounded-lg border border-[#3a4653] bg-[#242f3a]/90 px-3 py-2 text-sm font-black text-[#a5d6b8] shadow-lg shadow-black/20">
+              <span>💎</span>
+              <span>{crystals}</span>
+            </div>
+            <div className="w-[180px] sm:w-[240px]">
+              <XPBar xp={xp} level={level} />
+            </div>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl space-y-4 px-3 py-4 sm:px-4 sm:py-6">
+        <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+          <AddHabitForm onAdd={addHabit} currentCount={habits.length} />
+          <HabitList
+            habits={habits}
+            selectedId={selectedHabitId}
+            onSelect={(id) => {
+              setSelectedHabitId(id);
+              setSelectedSlot(null);
+            }}
+            onComplete={completeHabit}
+            onDelete={deleteHabit}
+          />
+        </div>
+
+        <Shop crystals={crystals} onBuy={buyPlant} />
+
         <Garden
           plants={plants}
           selectedSlot={selectedSlot}
@@ -91,7 +116,7 @@ export default function Home() {
             setSelectedSlot(index);
           }}
           onRemove={removePlant}
-          xp={xp}
+          crystals={crystals}
         />
 
         <InventoryStrip
@@ -104,22 +129,6 @@ export default function Home() {
             setPlantingMode(true);
           }}
         />
-
-        <Shop xp={xp} onBuy={buyPlant} />
-
-        <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-          <AddHabitForm onAdd={addHabit} currentCount={habits.length} />
-          <HabitList
-            habits={habits}
-            selectedId={selectedHabitId}
-            onSelect={(id) => {
-              setSelectedHabitId(id);
-              setSelectedSlot(null);
-            }}
-            onComplete={completeHabit}
-            onDelete={deleteHabit}
-          />
-        </div>
       </main>
 
       <footer className="py-6 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5c6b7a]">

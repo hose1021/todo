@@ -79,6 +79,16 @@ export function formatTimeRemaining(ms: number): string {
   return `${minutes}м`;
 }
 
+const STAGE_SPRITE_BASE: Record<number, number> = { 0: 1, 1: 3, 2: 5, 3: 7, 4: 8, 5: 10 };
+
+export function getPlantSpriteSrc(plant: Plant): string {
+  const progress = getPlantProgress(plant);
+  const base = STAGE_SPRITE_BASE[progress.stage] ?? 1;
+  const offset = progress.isGrowing && progress.progress > 0.5 ? 1 : 0;
+  const spriteIndex = Math.min(10, base + (progress.stage < 3 ? offset : 0));
+  return `/trees/${plant.variant}/${spriteIndex}.png`;
+}
+
 export const STAGE_NAMES = [
   "Семя",
   "Росток",

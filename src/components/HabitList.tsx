@@ -1,7 +1,7 @@
 "use client";
 
 import { Habit } from "@/lib/types";
-import { XP_PER_COMPLETION } from "@/lib/types";
+import { XP_PER_COMPLETION, CRYSTALS_PER_COMPLETION } from "@/lib/types";
 
 interface HabitListProps {
   habits: Habit[];
@@ -68,6 +68,9 @@ export default function HabitList({
 
               <span className="w-10 flex-shrink-0 text-right text-[11px] font-black text-[#d5a63d]">
                 +{XP_PER_COMPLETION} XP
+              </span>
+              <span className="w-10 flex-shrink-0 text-right text-[11px] font-black text-[#a5d6b8]">
+                +{CRYSTALS_PER_COMPLETION} 💎
               </span>
 
               <button

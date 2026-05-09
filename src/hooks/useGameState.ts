@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { GameState, Habit, Plant, FLOWER_COLORS, MAX_HABITS, MAX_PLANTS, XP_PER_COMPLETION, PLANT_PRICE, UPGRADE_PRICE } from "@/lib/types";
+import { GameState, Habit, Plant, FLOWER_COLORS, MAX_HABITS, MAX_PLANTS, XP_PER_COMPLETION, CRYSTALS_PER_COMPLETION, PLANT_PRICE, UPGRADE_PRICE } from "@/lib/types";
 import { saveGame, loadGame } from "@/lib/storage";
 import { addXP } from "@/lib/gameLogic";
 import { getPlantStage } from "@/lib/gameLogic";
@@ -10,6 +10,7 @@ import { playPlantSound, playCompleteSound, playDeleteSound, playLevelUpSound } 
 const initialState: GameState = {
   xp: 0,
   level: 1,
+  crystals: 0,
   habits: [],
   plants: Array(MAX_PLANTS).fill(null),
   inventory: [],
@@ -17,7 +18,20 @@ const initialState: GameState = {
 
 function migrateIfNeeded(state: GameState): GameState {
   const raw = state as unknown as Record<string, unknown>;
-  if (Array.isArray(raw.inventory)) return state;
+  if (Array.isArray(raw.inventory)) {
+    if (typeof raw.crystals !== "number") {
+      return { ...state, crystals: state.crystals ?? 0 };
+    }
+    const inventory = (raw.inventory as Plant[]).map((p: Plant) => ({
+      ...p,
+      variant: typeof p.variant === "number" ? `tree_${(p.variant % 2) + 1}` : p.variant,
+    }));
+    const plants = state.plants.map((p) => p ? {
+      ...p,
+      variant: typeof p.variant === "number" ? `tree_${(p.variant % 2) + 1}` : p.variant,
+    } : null);
+    return { ...state, inventory, plants };
+  }
 
   const oldHabits = state.habits as unknown as (Habit & { plantVariant?: number; color?: string })[];
   const newHabits: Habit[] = [];
@@ -35,7 +49,7 @@ function migrateIfNeeded(state: GameState): GameState {
       if (h.plantVariant !== undefined && i < MAX_PLANTS) {
         newPlants[i] = {
           id: h.id,
-          variant: h.plantVariant ?? 0,
+          variant: typeof h.plantVariant === "number" ? `tree_${(h.plantVariant % 2) + 1}` : String(h.plantVariant ?? "tree_1"),
           color: h.color ?? FLOWER_COLORS[i % FLOWER_COLORS.length],
           plantedAt: Date.now() - (h.completions ?? 0) * 3600000,
           upgrades: Math.max(0, Math.min(3, (h.completions ?? 0) - 1)),
@@ -44,7 +58,7 @@ function migrateIfNeeded(state: GameState): GameState {
     }
   });
 
-  return { ...state, habits: newHabits, plants: newPlants, inventory: newInventory };
+  return { ...state, crystals: state.crystals ?? 0, habits: newHabits, plants: newPlants, inventory: newInventory };
 }
 
 export function useGameState() {
@@ -104,7 +118,7 @@ export function useGameState() {
       } else {
         playCompleteSound();
       }
-      return { ...s, habits, xp: updated.xp, level: updated.level };
+      return { ...s, habits, xp: updated.xp, level: updated.level, crystals: s.crystals + CRYSTALS_PER_COMPLETION };
     });
   }, []);
 
@@ -116,8 +130,8 @@ export function useGameState() {
     playDeleteSound();
   }, []);
 
-  const buyPlant = useCallback((variant: number) => {
-    if (state.xp < PLANT_PRICE) return false;
+  const buyPlant = useCallback((variant: string) => {
+    if (state.crystals < PLANT_PRICE) return false;
     if (state.inventory.length >= 99) return false;
     const color = FLOWER_COLORS[state.inventory.length % FLOWER_COLORS.length];
     const plant: Plant = {
@@ -129,11 +143,11 @@ export function useGameState() {
     };
     setState((s) => ({
       ...s,
-      xp: s.xp - PLANT_PRICE,
+      crystals: s.crystals - PLANT_PRICE,
       inventory: [...s.inventory, plant],
     }));
     return true;
-  }, [state.xp, state.inventory.length]);
+  }, [state.crystals, state.inventory.length]);
 
   const plantFromInventory = useCallback((plantId: string, slotIndex: number) => {
     if (slotIndex < 0 || slotIndex >= MAX_PLANTS) return false;
@@ -159,10 +173,10 @@ export function useGameState() {
       const stage = getPlantStage(plant);
       if (stage < 2) return s;
       if (plant.upgrades >= 3) return s;
-      if (s.xp < UPGRADE_PRICE) return s;
+      if (s.crystals < UPGRADE_PRICE) return s;
       const plants = [...s.plants];
       plants[slotIndex] = { ...plant, upgrades: plant.upgrades + 1 };
-      return { ...s, plants, xp: s.xp - UPGRADE_PRICE };
+      return { ...s, plants, crystals: s.crystals - UPGRADE_PRICE };
     });
     return true;
   }, []);
@@ -170,11 +184,13 @@ export function useGameState() {
   const removePlant = useCallback((slotIndex: number) => {
     if (slotIndex < 0 || slotIndex >= MAX_PLANTS) return false;
     setState((s) => {
-      if (!s.plants[slotIndex]) return s;
+      const plant = s.plants[slotIndex];
+      if (!plant) return s;
+      const refund = PLANT_PRICE + plant.upgrades * UPGRADE_PRICE;
       const plants = [...s.plants];
       plants[slotIndex] = null;
       playDeleteSound();
-      return { ...s, plants };
+      return { ...s, plants, crystals: s.crystals + refund };
     });
     return true;
   }, []);
@@ -182,6 +198,7 @@ export function useGameState() {
   return {
     xp: state.xp,
     level: state.level,
+    crystals: state.crystals,
     habits: state.habits,
     plants: state.plants,
     inventory: state.inventory,

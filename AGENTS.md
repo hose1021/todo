@@ -44,9 +44,10 @@ src/
 ## Game mechanics
 
 - **Habit**: just a task — name, completions count. No plant attached. MAX_HABITS=50.
-- **Plant**: bought in Shop (50 XP), stored in inventory, then planted into a garden slot (0–29). Has `variant` (0–2), `color`, `plantedAt` timestamp, `upgrades` (0–3).
-- **Growth**: time-based for stages 0→1 (2h) and 1→2 (6h). Stages 2→3, 3→4, 4→5 require XP upgrades (30 XP each). `effectiveStage = min(2, timeStage) + upgrades`.
-- **XP**: +10 per habit completion. Spent on buying plants and upgrading.
+- **Plant**: bought in Shop (50 💎), stored in inventory, then planted into a garden slot (0–29). Has `variant` (0–2), `color`, `plantedAt` timestamp, `upgrades` (0–3).
+- **Growth**: time-based for stages 0→1 (2h) and 1→2 (6h). Stages 2→3, 3→4, 4→5 require crystal upgrades (30 💎 each). `effectiveStage = min(2, timeStage) + upgrades`.
+- **XP vs Crystals**: XP levels up (level*100). Crystals (💎) are the currency for buying/upgrading plants. +10 XP + 10 💎 per habit completion.
+- **Refund**: deleting a plant returns full crystal cost (50 + upgrades*30 💎).
 - **Re-render ticker**: `setInterval` every 30s forces re-render so time-based stages update visually.
 
 ## Key conventions

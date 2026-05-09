@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { STAGE_NAMES } from "@/lib/gameLogic";
 
 interface PlantProps {
@@ -7,7 +8,7 @@ interface PlantProps {
   color: string;
   name: string;
   highlighted?: boolean;
-  variant?: number;
+  src?: string;
 }
 
 export const PLANT_EMOJIS = [
@@ -19,10 +20,10 @@ export const PLANT_EMOJIS = [
   ["🌺", "🌷", "🌸"],
 ];
 
-export default function Plant({ stage, color, name, highlighted, variant }: PlantProps) {
+export default function Plant({ stage, color, name, highlighted, src }: PlantProps) {
   const bucket = PLANT_EMOJIS[stage] ?? PLANT_EMOJIS[0];
-  const v = (variant ?? 0) % bucket.length;
-  const emoji = bucket[v];
+  const seed = Array.from(`${name}${color}`).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const emoji = bucket[seed % bucket.length];
 
   return (
     <div
@@ -31,17 +32,32 @@ export default function Plant({ stage, color, name, highlighted, variant }: Plan
       }`}
       title={`${name} — ${STAGE_NAMES[stage] || "?"}`}
     >
-      <span
-        aria-hidden="true"
-        className="select-none text-[34px] leading-none sm:text-[44px]"
-        style={{
-          filter: highlighted
-            ? `drop-shadow(0 0 12px ${color}) drop-shadow(0 8px 12px rgba(0,0,0,0.35))`
-            : "drop-shadow(0 7px 9px rgba(0,0,0,0.32))",
-        }}
-      >
-        {emoji}
-      </span>
+      {src ? (
+        <Image
+          src={src}
+          alt={name}
+          fill
+          className="object-contain"
+          sizes="(max-width: 640px) 42px, 68px"
+          style={{
+            filter: highlighted
+              ? `drop-shadow(0 0 12px ${color}) drop-shadow(0 8px 12px rgba(0,0,0,0.35))`
+              : "drop-shadow(0 7px 9px rgba(0,0,0,0.32))",
+          }}
+        />
+      ) : (
+        <span
+          aria-hidden="true"
+          className="select-none text-[34px] leading-none sm:text-[44px]"
+          style={{
+            filter: highlighted
+              ? `drop-shadow(0 0 12px ${color}) drop-shadow(0 8px 12px rgba(0,0,0,0.35))`
+              : "drop-shadow(0 7px 9px rgba(0,0,0,0.32))",
+          }}
+        >
+          {emoji}
+        </span>
+      )}
       {highlighted && (
         <span className="absolute -bottom-4 max-w-[92px] truncate rounded-md border border-[#526474] bg-[#202833]/95 px-2 py-0.5 text-[10px] font-semibold text-[#dce8f0] shadow-lg shadow-black/30">
           {name}

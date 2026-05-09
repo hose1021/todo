@@ -2,8 +2,8 @@
 
 import Plant from "./Plant";
 import { Plant as PlantType } from "@/lib/types";
-import { getPlantStage, getPlantProgress, formatTimeRemaining, STAGE_NAMES } from "@/lib/gameLogic";
-import { UPGRADE_PRICE } from "@/lib/types";
+import { getPlantStage, getPlantProgress, formatTimeRemaining, getPlantSpriteSrc, STAGE_NAMES } from "@/lib/gameLogic";
+import { UPGRADE_PRICE, PLANT_PRICE } from "@/lib/types";
 
 interface GardenProps {
   plants: (PlantType | null)[];
@@ -13,7 +13,7 @@ interface GardenProps {
   onPlantInSlot?: (index: number) => void;
   onUpgrade?: (index: number) => void;
   onRemove?: (index: number) => void;
-  xp: number;
+  crystals: number;
 }
 
 const GRID_COLS = 6;
@@ -27,7 +27,7 @@ export default function Garden({
   onPlantInSlot,
   onUpgrade,
   onRemove,
-  xp,
+  crystals,
 }: GardenProps) {
   const count = plants.filter((p) => p !== null).length;
 
@@ -58,7 +58,7 @@ export default function Garden({
           const isSelected = selectedSlot === i;
           const stage = plant ? getPlantStage(plant) : 0;
           const plantProgress = plant ? getPlantProgress(plant) : null;
-          const canUpgrade = plant && stage >= 2 && plant.upgrades < 3 && xp >= UPGRADE_PRICE;
+          const canUpgrade = plant && stage >= 2 && plant.upgrades < 3 && crystals >= UPGRADE_PRICE;
           const isGrowing = plantProgress?.isGrowing ?? false;
 
           return (
@@ -94,7 +94,7 @@ export default function Garden({
                       color={plant.color}
                       name={STAGE_NAMES[stage] || "Растение"}
                       highlighted={isSelected}
-                      variant={plant.variant}
+                      src={getPlantSpriteSrc(plant)}
                     />
                   </div>
                   {canUpgrade && (
@@ -141,28 +141,27 @@ export default function Garden({
                   {progress.isGrowing
                     ? `Растёт — ${formatTimeRemaining(progress.remainingMs)}`
                     : stage < 5 && plant.upgrades < 3
-                      ? `${UPGRADE_PRICE} XP — улучшить`
-                      : stage === 5
-                        ? "Максимум"
-                        : "Готов к улучшению"}
+                      ? `${UPGRADE_PRICE} 💎 — улучшить`
+                      : "Максимальный уровень"}
                 </p>
               </div>
               <div className="flex gap-1.5">
                 {stage >= 2 && plant.upgrades < 3 && (
                   <button
                     onClick={() => onUpgrade?.(selectedSlot!)}
-                    disabled={xp < UPGRADE_PRICE}
+                    disabled={crystals < UPGRADE_PRICE}
                     className={`rounded-md px-3 py-1 text-[11px] font-black uppercase transition-all ${
-                      xp >= UPGRADE_PRICE
+                      crystals >= UPGRADE_PRICE
                         ? "bg-[#d5a63d] text-[#1f2630] hover:bg-[#edbe52] active:scale-95"
                         : "cursor-not-allowed bg-[#3a3a2e] text-[#6b6348]"
                     }`}
                   >
-                    ↑ {UPGRADE_PRICE}
+                    ↑ {UPGRADE_PRICE} 💎
                   </button>
                 )}
                 <button
                   onClick={() => onRemove?.(selectedSlot!)}
+                  title={`Удалить (вернуть ${PLANT_PRICE + plant.upgrades * UPGRADE_PRICE} 💎)`}
                   className="rounded-md border border-[#3a4653] bg-[#242f3a] px-2 py-1 text-[10px] font-black text-[#8d9ba8] transition-all hover:bg-[#432d35] hover:text-[#ff8d8d]"
                 >
                   ✕
