@@ -32,7 +32,7 @@ export default function AddHabitForm({ onAdd, currentCount }: AddHabitFormProps)
     }
     const ok = onAdd(trimmed);
     if (!ok) {
-      setError("Нет свободных грядок!");
+      setError("Слишком много привычек!");
       return;
     }
     setName("");
@@ -40,24 +40,30 @@ export default function AddHabitForm({ onAdd, currentCount }: AddHabitFormProps)
     setOpen(false);
   };
 
+  const handleCancel = () => {
+    setOpen(false);
+    setName("");
+    setError("");
+  };
+
   if (!open) {
     return (
       <button
         onClick={() => setOpen(true)}
         disabled={isFull}
-        className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all ${
+        className={`w-full rounded-[10px] border px-4 py-3 text-sm font-black uppercase tracking-[0.12em] transition-all ${
           isFull
-            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-            : "bg-green-500 hover:bg-green-600 text-white shadow-md hover:shadow-lg active:scale-[0.98]"
+            ? "cursor-not-allowed border-[#323b46] bg-[#242b34] text-[#596675]"
+            : "border-[#456052] bg-[#2e4442] text-[#dcf7e7] shadow-lg shadow-black/20 hover:bg-[#36514d] active:scale-[0.98]"
         }`}
       >
-        {isFull ? "Сад заполнен (12/12)" : "+ Добавить привычку"}
+        {isFull ? `Максимум привычек (${currentCount}/${MAX_HABITS})` : "+ Добавить привычку"}
       </button>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="rounded-[10px] border border-[#33404d] bg-[#222b36] p-3 shadow-lg shadow-black/20">
       <div className="flex gap-2">
         <input
           ref={inputRef}
@@ -66,26 +72,26 @@ export default function AddHabitForm({ onAdd, currentCount }: AddHabitFormProps)
           onChange={(e) => { setName(e.target.value); setError(""); }}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSubmit();
-            if (e.key === "Escape") { setOpen(false); setName(""); setError(""); }
+            if (e.key === "Escape") handleCancel();
           }}
           placeholder="Например: Полить цветы"
           maxLength={40}
-          className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-200 transition-all"
+          className="min-w-0 flex-1 rounded-lg border border-[#3a4653] bg-[#1b222c] px-3 py-2 text-sm font-semibold text-[#e5edf3] outline-none transition-all placeholder:text-[#657486] focus:border-[#607d73] focus:ring-2 focus:ring-[#2f4a45]"
         />
         <button
           onClick={handleSubmit}
-          className="px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white text-sm font-semibold transition-all active:scale-95"
+          className="rounded-lg bg-[#d5a63d] px-4 py-2 text-sm font-black text-[#1f2630] transition-all hover:bg-[#edbe52] active:scale-95"
         >
           OK
         </button>
         <button
-          onClick={() => { setOpen(false); setName(""); setError(""); }}
-          className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 text-sm transition-all"
+          onClick={handleCancel}
+          className="rounded-lg border border-[#3a4653] bg-[#242f3a] px-3 py-2 text-sm font-black text-[#8d9ba8] transition-all hover:bg-[#2b3845]"
         >
           ✕
         </button>
       </div>
-      {error && <p className="text-xs text-red-500 px-1">{error}</p>}
+      {error && <p className="mt-2 px-1 text-xs font-semibold text-[#ff8d8d]">{error}</p>}
     </div>
   );
 }

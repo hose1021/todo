@@ -5,6 +5,8 @@ import { useGameState } from "@/hooks/useGameState";
 import Garden from "@/components/Garden";
 import HabitList from "@/components/HabitList";
 import AddHabitForm from "@/components/AddHabitForm";
+import Shop from "@/components/Shop";
+import InventoryStrip from "@/components/InventoryStrip";
 import XPBar from "@/components/XPBar";
 import Confetti from "@/components/Confetti";
 
@@ -13,66 +15,115 @@ export default function Home() {
     xp,
     level,
     habits,
+    plants,
+    inventory,
     loaded,
     levelUp,
     addHabit,
     completeHabit,
     deleteHabit,
+    buyPlant,
+    plantFromInventory,
+    upgradePlant,
+    removePlant,
   } = useGameState();
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const [plantingMode, setPlantingMode] = useState(false);
+  const [selectedInventoryPlantId, setSelectedInventoryPlantId] = useState<string | null>(null);
 
   if (!loaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-green-50">
+      <div className="flex min-h-screen items-center justify-center bg-[#202833]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-green-400 border-t-transparent rounded-full animate-spin" />
-          <span className="text-gray-400 text-sm">Загрузка сада...</span>
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#5e7284] border-t-transparent" />
+          <span className="text-sm font-semibold uppercase tracking-[0.18em] text-[#7d8b99]">
+            Загрузка сада...
+          </span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-green-50">
+    <div className="min-h-screen">
       <Confetti show={levelUp} />
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-green-50/90 backdrop-blur border-b border-green-100">
-        <div className="max-w-2xl mx-auto px-3 py-2 flex items-center gap-2">
-          <span className="text-xl">🌱</span>
-          <h1 className="text-lg font-bold text-gray-800 mr-auto">Habbit Garden</h1>
-          <div className="flex-1 max-w-xs">
+      <header className="sticky top-0 z-40 border-b border-[#33404d] bg-[#202833]/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-4xl items-center gap-3 px-3 py-3 sm:px-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#3a4653] bg-[#242f3a] text-xl shadow-lg shadow-black/20">
+            🌿
+          </div>
+          <div className="mr-auto min-w-0">
+            <h1 className="truncate text-lg font-black uppercase tracking-[0.12em] text-[#edf5f8]">
+              Habbit Garden
+            </h1>
+            <p className="hidden text-[11px] font-semibold uppercase tracking-[0.16em] text-[#657486] sm:block">
+              тёмная сетка привычек
+            </p>
+          </div>
+          <div className="w-[190px] sm:w-[280px]">
             <XPBar xp={xp} level={level} />
           </div>
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="max-w-2xl mx-auto px-3 py-3 space-y-4">
-        {/* Garden */}
+      <main className="mx-auto max-w-4xl space-y-4 px-3 py-4 sm:px-4 sm:py-6">
         <Garden
-          habits={habits}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
+          plants={plants}
+          selectedSlot={selectedSlot}
+          onSelect={(index) => {
+            setSelectedSlot(index);
+            setSelectedHabitId(null);
+          }}
+          plantingMode={plantingMode}
+          onPlantInSlot={(index) => {
+            if (selectedInventoryPlantId) {
+              plantFromInventory(selectedInventoryPlantId, index);
+              setSelectedInventoryPlantId(null);
+              setPlantingMode(false);
+            }
+          }}
+          onUpgrade={(index) => {
+            upgradePlant(index);
+            setSelectedSlot(null);
+            setSelectedSlot(index);
+          }}
+          onRemove={removePlant}
+          xp={xp}
         />
 
-        {/* Controls */}
-        <div className="space-y-3">
+        <InventoryStrip
+          inventory={inventory}
+          plantingMode={plantingMode}
+          selectedPlantId={selectedInventoryPlantId}
+          onSelect={setSelectedInventoryPlantId}
+          onRequestPlant={(plantId) => {
+            setSelectedInventoryPlantId(plantId);
+            setPlantingMode(true);
+          }}
+        />
+
+        <Shop xp={xp} onBuy={buyPlant} />
+
+        <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
           <AddHabitForm onAdd={addHabit} currentCount={habits.length} />
           <HabitList
             habits={habits}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
+            selectedId={selectedHabitId}
+            onSelect={(id) => {
+              setSelectedHabitId(id);
+              setSelectedSlot(null);
+            }}
             onComplete={completeHabit}
             onDelete={deleteHabit}
           />
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="text-center py-6 text-xs text-gray-400">
-        Выполняй привычки • получай опыт • выращивай сад 🌺
+      <footer className="py-6 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5c6b7a]">
+        Выполняй привычки • получай XP • покупай и выращивай сад
       </footer>
     </div>
   );

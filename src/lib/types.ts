@@ -2,14 +2,23 @@ export interface Habit {
   id: string;
   name: string;
   completions: number;
-  color: string;
   createdAt: number;
+}
+
+export interface Plant {
+  id: string;
+  variant: number;
+  color: string;
+  plantedAt: number;
+  upgrades: number;
 }
 
 export interface GameState {
   xp: number;
   level: number;
   habits: Habit[];
+  plants: (Plant | null)[];
+  inventory: Plant[];
 }
 
 export const FLOWER_COLORS = [
@@ -18,10 +27,14 @@ export const FLOWER_COLORS = [
   "#FF8787", "#74C0FC", "#DA77F2", "#FFA94D",
 ];
 
-export const MAX_HABITS = 12;
-export const XP_PER_COMPLETION = 10;
+export const PLANT_VARIANTS = [
+  { emoji: "🌱", label: "Росток 1" },
+  { emoji: "🌿", label: "Росток 2" },
+  { emoji: "☘️", label: "Росток 3" },
+];
 
-export interface GrowthStage {
-  name: string;
-  minCompletions: number;
-}
+export const MAX_HABITS = 50;
+export const MAX_PLANTS = 30;
+export const XP_PER_COMPLETION = 10;
+export const PLANT_PRICE = 50;
+export const UPGRADE_PRICE = 30;

@@ -3,7 +3,8 @@
 ## Project overview
 
 Next.js 14 App Router (pages router is not used) + TypeScript strict + Tailwind CSS 3.
-The entire app is a single client-side page — no server components, no API routes, no database.
+Single client-side page — no server components (except layout.tsx), no API routes, no database.
+Russian-language UI.
 
 ## Commands
 
@@ -11,7 +12,7 @@ The entire app is a single client-side page — no server components, no API rou
 npm run dev      # dev server on localhost:3000
 npm run build    # production build
 npm run lint     # ESLint (Next.js built-in config)
-npx tsc --noEmit # typecheck
+npx tsc --noEmit # typecheck (no separate check script — must run manually)
 ```
 
 ## Architecture
@@ -19,36 +20,50 @@ npx tsc --noEmit # typecheck
 ```
 src/
 ├── app/
-│   ├── layout.tsx   # root layout, metadata
+│   ├── layout.tsx   # root layout (SERVER component, no "use client"), Russian metadata
 │   ├── page.tsx      # single page, wires everything together
 │   └── globals.css   # Tailwind directives + body base style
 ├── components/
-│   ├── Garden.tsx       # 4×3 soil grid, renders Plant SVGs
-│   ├── Plant.tsx        # 6 inline SVG plant stages (Seed → Blooming)
-│   ├── HabitList.tsx    # habit rows with complete/delete buttons
+│   ├── Garden.tsx       # 6×5 soil grid (30 slots), shows Plant objects
+│   ├── Plant.tsx        # 6 inline emoji plant stages (Семя → Цветущий)
+│   ├── HabitList.tsx    # habit rows with complete (+10 XP) / delete buttons
 │   ├── AddHabitForm.tsx # inline form with validation, max 40 chars
+│   ├── Shop.tsx         # buy plants (3 variants) for 50 XP each
+│   ├── InventoryStrip.tsx # bar under garden: bought plants → click to plant
 │   ├── XPBar.tsx        # level badge + XP progress bar
 │   └── Confetti.tsx     # particle overlay on level-up
 ├── hooks/
-│   └── useGameState.ts  # single state hook: habits, XP, level, localStorage sync
+│   └── useGameState.ts  # single state hook: habits, plants, inventory, XP, level, localStorage
 └── lib/
-    ├── types.ts      # Habit, GameState interfaces + constants (MAX_HABITS=12, XP_PER_COMPLETION=10, FLOWER_COLORS)
-    ├── gameLogic.ts  # getXPForLevel (level*100), addXP (carries overflow), getGrowthStage (6 thresholds)
-    └── storage.ts    # save/load/clear localStorage under key "habbittodo_save"
+    ├── types.ts      # Habit, Plant, GameState + constants
+    ├── gameLogic.ts  # getXPForLevel, addXP, getPlantStage (time-based + upgrades)
+    ├── storage.ts    # save/load/clear localStorage under key "habbittodo_save"
+    └── sound.ts      # Web Audio API sounds: plant, complete, delete, levelUp
 ```
+
+## Game mechanics
+
+- **Habit**: just a task — name, completions count. No plant attached. MAX_HABITS=50.
+- **Plant**: bought in Shop (50 XP), stored in inventory, then planted into a garden slot (0–29). Has `variant` (0–2), `color`, `plantedAt` timestamp, `upgrades` (0–3).
+- **Growth**: time-based for stages 0→1 (2h) and 1→2 (6h). Stages 2→3, 3→4, 4→5 require XP upgrades (30 XP each). `effectiveStage = min(2, timeStage) + upgrades`.
+- **XP**: +10 per habit completion. Spent on buying plants and upgrading.
+- **Re-render ticker**: `setInterval` every 30s forces re-render so time-based stages update visually.
 
 ## Key conventions
 
-- Path alias `@/*` maps to `./src/*` (configured in tsconfig).
-- Every component is marked `"use client"` — the whole tree is client-rendered.
-- `useGameState` is the only state owner. Components receive data/callbacks as props.
-- `useGameState` auto-saves to localStorage on state change (guarded by `loaded` flag to avoid overwriting on first render).
-- Plant growth is purely cosmetic — computed from `completions` via `getGrowthStage()`. No separate "plant" entity; each `Habit` maps 1:1 to a garden slot by array index.
+- Path alias `@/*` maps to `./src/*` (tsconfig paths).
+- All components in `components/` and `page.tsx` are `"use client"`. `layout.tsx` is the only server component.
+- `useGameState` is the single state owner. Components receive data/callbacks as props.
+- `useGameState` auto-saves to localStorage on state change (guarded by `loaded` flag).
+- `migrateIfNeeded()` in the hook converts old-format saves (habits with plantVariant) to new format.
 
 ## Data model quirks
 
-- `Habit.id` is generated with `crypto.randomUUID()` — requires `crypto` global (available in modern browsers).
-- `Habit.color` is assigned from `FLOWER_COLORS[habits.length % FLOWER_COLORS.length]` at creation time.
-- Deleting a habit shifts subsequent habits left in the array, so their garden positions change.
-- `GameState.levelUp` is a transient timer-based flag in the React state (not persisted) — it triggers Confetti for ~2.5s then self-clears.
-- `floatTexts`/`showFloat` in the hook are unused dead code — wired but never rendered in any component.
+- `Habit.id` generated via `crypto.randomUUID()`.
+- `Plant.id` generated via `crypto.randomUUID()`.
+- `Plant.color` from `FLOWER_COLORS[inventory.length % FLOWER_COLORS.length]` at purchase time.
+- Deleting a plant sets its garden slot to `null`.
+- `levelUp` is a transient timer-based React state flag — triggers Confetti for ~2.5s.
+- `floatTexts`/`showFloat` in the hook are unused dead code.
+- Old localStorage saves are auto-migrated: habits with `plantVariant` → new `Habit[]` + `Plant[]` + `inventory`.
+- `screenshot-*.png` files are gitignored.

@@ -1,7 +1,6 @@
 "use client";
 
 import { Habit } from "@/lib/types";
-import { getGrowthStage, STAGE_NAMES } from "@/lib/gameLogic";
 import { XP_PER_COMPLETION } from "@/lib/types";
 
 interface HabitListProps {
@@ -20,83 +19,74 @@ export default function HabitList({
   onDelete,
 }: HabitListProps) {
   return (
-    <div className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide px-1">
+    <section className="rounded-[10px] border border-[#33404d] bg-[#222b36] p-3 shadow-lg shadow-black/20">
+      <h3 className="px-1 pb-2 text-xs font-black uppercase tracking-[0.18em] text-[#91a0af]">
         Мои привычки
       </h3>
 
       {habits.length === 0 && (
-        <p className="text-gray-400 text-sm text-center py-6">
-          Добавь первую привычку и начни выращивать сад!
+        <p className="py-6 text-center text-sm font-semibold text-[#657486]">
+          Добавь первую привычку и начни зарабатывать XP!
         </p>
       )}
 
-      {habits.map((habit) => {
-        const stage = getGrowthStage(habit.completions);
-        const isSelected = habit.id === selectedId;
+      <div className="flex max-h-[360px] flex-col gap-2 overflow-auto pr-1">
+        {habits.map((habit) => {
+          const isSelected = habit.id === selectedId;
 
-        return (
-          <div
-            key={habit.id}
-            onClick={() => onSelect(isSelected ? null : habit.id)}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all border ${
-              isSelected
-                ? "bg-white border-green-400 shadow-md shadow-green-200/50 scale-[1.02]"
-                : "bg-white/60 border-transparent hover:bg-white hover:shadow-sm"
-            }`}
-          >
-            {/* Color dot */}
+          return (
             <div
-              className="w-3.5 h-3.5 rounded-full flex-shrink-0 shadow-sm"
-              style={{ backgroundColor: habit.color }}
-            />
+              key={habit.id}
+              onClick={() => onSelect(isSelected ? null : habit.id)}
+              className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-all ${
+                isSelected
+                  ? "scale-[1.01] border-[#55746e] bg-[#2e4442] shadow-md shadow-black/20"
+                  : "border-[#303b47] bg-[#1d2530] hover:border-[#3e4c5b] hover:bg-[#242f3a]"
+              }`}
+            >
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-black text-[#e5edf3]">
+                  {habit.name}
+                </div>
+                <div className="text-[11px] font-semibold text-[#697888]">
+                  {habit.completions} раз
+                </div>
+              </div>
 
-            {/* Name and stage */}
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-800 truncate">
-                {habit.name}
-              </div>
-              <div className="text-[11px] text-gray-400">
-                {STAGE_NAMES[stage]} • {habit.completions} раз
-              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onComplete(habit.id);
+                }}
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-[#31453e] text-[#a8e8bd] shadow-sm transition-all hover:bg-[#3f674d] active:scale-90"
+                title="Выполнить"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="3,8 7,12 13,4" />
+                </svg>
+              </button>
+
+              <span className="w-10 flex-shrink-0 text-right text-[11px] font-black text-[#d5a63d]">
+                +{XP_PER_COMPLETION} XP
+              </span>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(habit.id);
+                }}
+                className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-[#667584] transition-colors hover:bg-[#432d35] hover:text-[#ff8d8d]"
+                title="Удалить"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="2" y1="2" x2="10" y2="10" />
+                  <line x1="10" y1="2" x2="2" y2="10" />
+                </svg>
+              </button>
             </div>
-
-            {/* Complete button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onComplete(habit.id);
-              }}
-              className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 hover:bg-green-500 text-green-600 hover:text-white flex items-center justify-center transition-all active:scale-90 shadow-sm hover:shadow-md"
-              title="Выполнить"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="3,8 7,12 13,4" />
-              </svg>
-            </button>
-
-            {/* XP label */}
-            <span className="text-[11px] font-semibold text-amber-500 flex-shrink-0 w-10 text-right">
-              +{XP_PER_COMPLETION} XP
-            </span>
-
-            {/* Delete button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(habit.id);
-              }}
-              className="flex-shrink-0 w-6 h-6 rounded-full hover:bg-red-100 text-gray-300 hover:text-red-500 flex items-center justify-center transition-colors"
-              title="Удалить"
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="2" y1="2" x2="10" y2="10" />
-                <line x1="10" y1="2" x2="2" y2="10" />
-              </svg>
-            </button>
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
