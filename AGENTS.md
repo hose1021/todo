@@ -2,7 +2,7 @@
 
 ## Project overview
 
-Next.js 14 App Router + TypeScript strict + Tailwind CSS 3. Static export (`output: "export"`) — no server at runtime.
+Next.js 16 (Turbopack default) + React 19 + TypeScript 6 + Tailwind CSS 3. Static export (`output: "export"`) — no server at runtime.
 Single client-side page, no API routes, no database. Russian-language UI. Inter font via `next/font/google`.
 shadcn/ui (`Sheet`, `Popover`, `Button`) via `@base-ui/react`. `components.json` is the shadcn config.
 Package manager: `bun` (`bun.lock` committed). `npm run <script>` also works.
@@ -14,7 +14,7 @@ npm run dev           # dev server on localhost:3000
 npm run build         # production build → out/
 npm run test          # vitest (single run)
 npm run test:watch    # vitest (watch mode)
-npm run lint          # ESLint (Next.js built-in config)
+npm run lint          # ESLint (flat config: eslint.config.mjs)
 npx tsc --noEmit      # typecheck (no separate check script)
 ```
 
@@ -100,5 +100,7 @@ tests/
 
 ## ESLint
 
-- Pinned to eslint@8.57.1 + eslint-config-next@14. Do NOT upgrade to eslint 9 — Next.js 14 is incompatible.
-- Config: `.eslintrc.json` extends `next/core-web-vitals`.
+- ESLint 10 flat config (`eslint.config.mjs`). `next lint` was removed in Next.js 16 — run `eslint .` directly.
+- Config imports `@next/eslint-plugin-next` and uses `nextPlugin.configs["core-web-vitals"]` (flat config object).
+- `eslint-config-next` is no longer needed — the plugin is a direct dev dependency.
+- Ignores: `.next/` and `out/` are excluded in the config.
