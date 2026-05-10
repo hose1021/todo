@@ -6,19 +6,20 @@ import { MAX_HABITS } from "@/lib/types";
 interface AddHabitFormProps {
   onAdd: (name: string) => boolean;
   currentCount: number;
+  embedded?: boolean;
+  onClose?: () => void;
 }
 
-export default function AddHabitForm({ onAdd, currentCount }: AddHabitFormProps) {
-  const [open, setOpen] = useState(false);
+export default function AddHabitForm({ onAdd, currentCount, embedded = true, onClose }: AddHabitFormProps) {
+  const [open, setOpen] = useState(!embedded);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const isFull = currentCount >= MAX_HABITS;
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
-
-  const isFull = currentCount >= MAX_HABITS;
 
   const handleSubmit = () => {
     const trimmed = name.trim();
@@ -38,15 +39,19 @@ export default function AddHabitForm({ onAdd, currentCount }: AddHabitFormProps)
     setName("");
     setError("");
     setOpen(false);
+    onClose?.();
   };
 
   const handleCancel = () => {
     setOpen(false);
     setName("");
     setError("");
+    onClose?.();
   };
 
-  if (!open) {
+  if (!embedded && isFull) return null;
+
+  if (embedded && !open) {
     return (
       <button
         onClick={() => setOpen(true)}
@@ -62,7 +67,7 @@ export default function AddHabitForm({ onAdd, currentCount }: AddHabitFormProps)
     );
   }
 
-  return (
+  const form = (
     <div className="rounded-[10px] border border-[#33404d] bg-[#222b36] p-3 shadow-lg shadow-black/20">
       <div className="flex gap-2">
         <input
@@ -92,6 +97,16 @@ export default function AddHabitForm({ onAdd, currentCount }: AddHabitFormProps)
         </button>
       </div>
       {error && <p className="mt-2 px-1 text-xs font-semibold text-[#ff8d8d]">{error}</p>}
+    </div>
+  );
+
+  if (embedded) return form;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={handleCancel}>
+      <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        {form}
+      </div>
     </div>
   );
 }

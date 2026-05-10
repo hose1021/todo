@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { Plant } from "@/lib/types";
+import { getPlantType, SPROUT_EMOJI } from "@/lib/plants";
 
 interface InventoryStripProps {
   inventory: Plant[];
@@ -27,7 +27,10 @@ export default function InventoryStrip({
       </h3>
       <div className="flex flex-wrap gap-2">
         {inventory.map((plant) => {
+          const def = getPlantType(plant.type);
           const isSelected = plant.id === selectedPlantId;
+          const emoji = def?.emoji ?? SPROUT_EMOJI;
+          const name = def?.name ?? plant.type;
 
           return (
             <button
@@ -47,21 +50,9 @@ export default function InventoryStrip({
                     : "border-[#3a4a3e] bg-[#25302d] hover:border-[#4d6150] hover:bg-[#2e3e38] active:scale-[0.97]"
               }`}
             >
-              <span
-                className="h-3 w-3 flex-shrink-0 rounded-full"
-                style={{ backgroundColor: plant.color, boxShadow: `0 0 8px ${plant.color}66` }}
-              />
-              <div className="relative h-8 w-8">
-                <Image
-                  src={`/trees/${plant.variant}/1.png`}
-                  alt=""
-                  fill
-                  className="object-contain"
-                  sizes="32px"
-                />
-              </div>
+              <span className="select-none text-lg leading-none">{emoji}</span>
               <span className="text-[10px] font-black text-[#a5d6b8]">
-                {plantingMode && isSelected ? "Посадка..." : "Посадить"}
+                {plantingMode && isSelected ? "Посадка..." : name}
               </span>
             </button>
           );

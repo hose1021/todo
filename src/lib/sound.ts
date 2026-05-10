@@ -1,6 +1,12 @@
 let audioCtx: AudioContext | null = null;
+let muted = false;
 
-function getCtx(): AudioContext {
+export function setMuted(value: boolean) {
+  muted = value;
+}
+
+function getCtx(): AudioContext | null {
+  if (muted) return null;
   if (!audioCtx) {
     audioCtx = new AudioContext();
   }
@@ -10,6 +16,7 @@ function getCtx(): AudioContext {
 function playTone(freq: number, duration: number, type: OscillatorType = "sine", volume = 0.15) {
   try {
     const ctx = getCtx();
+    if (!ctx) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = type;
@@ -28,6 +35,7 @@ function playTone(freq: number, duration: number, type: OscillatorType = "sine",
 export function playPlantSound() {
   try {
     const ctx = getCtx();
+    if (!ctx) return;
     const now = ctx.currentTime;
     [523, 659, 784].forEach((freq, i) => {
       const osc = ctx.createOscillator();
@@ -59,6 +67,7 @@ export function playDeleteSound() {
 export function playLevelUpSound() {
   try {
     const ctx = getCtx();
+    if (!ctx) return;
     const now = ctx.currentTime;
     [523, 659, 784, 1047].forEach((freq, i) => {
       const osc = ctx.createOscillator();

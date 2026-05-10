@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { getXPForLevel } from "@/lib/gameLogic";
 
 interface XPBarProps {
@@ -7,7 +8,7 @@ interface XPBarProps {
   level: number;
 }
 
-export default function XPBar({ xp, level }: XPBarProps) {
+export default memo(function XPBar({ xp, level }: XPBarProps) {
   const needed = getXPForLevel(level);
   const pct = Math.min((xp / needed) * 100, 100);
 
@@ -35,4 +36,4 @@ export default function XPBar({ xp, level }: XPBarProps) {
       </div>
     </div>
   );
-}
+});

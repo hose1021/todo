@@ -1,0 +1,188 @@
+import { PlantType, RarityLevel, RarityInfo, GrowthLevelInfo, AchievementState } from "./types";
+
+export const SPROUT_EMOJI = "🌱";
+
+export const RARITY_LEVELS: Record<RarityLevel, RarityInfo> = {
+  1: { name: "Common", bgColor: "bg-slate-400/20" },
+  2: { name: "Rare", bgColor: "bg-teal-400/20" },
+  3: { name: "Epic", bgColor: "bg-violet-500/20" },
+  4: { name: "Mythic", bgColor: "bg-rose-500/20" },
+  5: { name: "Legendary", bgColor: "bg-amber-400/20" },
+};
+
+export const GROWTH_LEVELS: Record<number, GrowthLevelInfo> = {
+  1: { multiplier: { grow: 0, cost: 0 }, scale: "scale-75", saturate: "saturate-[0.5]" },
+  2: { multiplier: { grow: 2, cost: 1.4 }, scale: "", saturate: "saturate-[0.8]" },
+  3: { multiplier: { grow: 4, cost: 2 }, scale: "scale-125", saturate: "saturate-[1.25]" },
+};
+
+export const PLANT_TYPES: PlantType[] = [
+  {
+    type: "grass",
+    name: "Herb",
+    cost: 5,
+    growHours: 8,
+    emoji: "🌿",
+    size: "text-2xl",
+    rarity: 1,
+    canPlant: () => true,
+  },
+  {
+    type: "tree",
+    name: "Tree",
+    cost: 50,
+    growHours: 20,
+    emoji: "🌳",
+    size: "text-5xl",
+    rarity: 1,
+    canPlant: (a) => hasAchievement(a, "firstHabit"),
+  },
+  {
+    type: "daffodil",
+    name: "Daffodil",
+    cost: 10,
+    growHours: 10,
+    emoji: "🌼",
+    size: "text-2xl",
+    rarity: 2,
+    canPlant: (a) => hasAchievement(a, "3streak"),
+  },
+  {
+    type: "tulip",
+    name: "Tulip",
+    cost: 20,
+    growHours: 12,
+    emoji: "🌷",
+    size: "text-2xl",
+    rarity: 2,
+    canPlant: (a) => hasAchievement(a, "5ticks"),
+  },
+  {
+    type: "sunflower",
+    name: "Sunflower",
+    cost: 25,
+    growHours: 12,
+    emoji: "🌻",
+    size: "text-2xl",
+    rarity: 2,
+    canPlant: (a) => hasAchievement(a, "9streak"),
+  },
+  {
+    type: "rose",
+    name: "Rose",
+    cost: 25,
+    growHours: 12,
+    emoji: "🌹",
+    size: "text-2xl",
+    rarity: 2,
+    canPlant: (a) => hasAchievement(a, "10ticks"),
+  },
+  {
+    type: "hibiscus",
+    name: "Hibiscus",
+    cost: 35,
+    growHours: 12,
+    emoji: "🌺",
+    size: "text-2xl",
+    rarity: 3,
+    canPlant: (a) => hasAchievement(a, "4flowersToPoles"),
+  },
+  {
+    type: "oryzasativa",
+    name: "Oryza Sativa",
+    cost: 45,
+    growHours: 16,
+    emoji: "🌾",
+    size: "text-3xl",
+    rarity: 3,
+    canPlant: (a) => hasAchievement(a, "1flowerLevel2"),
+  },
+  {
+    type: "cherryblossom",
+    name: "Cherry Blossom",
+    cost: 35,
+    growHours: 12,
+    emoji: "🌸",
+    size: "text-2xl",
+    rarity: 3,
+    canPlant: (a) => hasAchievement(a, "cherryblossom"),
+  },
+  {
+    type: "palmtree",
+    name: "Palm Tree",
+    cost: 65,
+    growHours: 24,
+    emoji: "🌴",
+    size: "text-5xl",
+    rarity: 3,
+    canPlant: (a) => hasAchievement(a, "18flowers"),
+  },
+  {
+    type: "hyacinth",
+    name: "Hyacinth",
+    cost: 55,
+    growHours: 72,
+    emoji: "🪻",
+    size: "text-3xl",
+    rarity: 3,
+    canPlant: (a) => hasAchievement(a, "1flowerLevel3"),
+  },
+  {
+    type: "mushroom",
+    name: "Mushroom",
+    cost: 40,
+    growHours: 12,
+    emoji: "🍄",
+    size: "text-2xl",
+    rarity: 4,
+    canPlant: (a) => hasAchievement(a, "30flowers"),
+  },
+  {
+    type: "evergreen",
+    name: "Evergreen",
+    cost: 65,
+    growHours: 20,
+    emoji: "🌲",
+    size: "text-5xl",
+    rarity: 4,
+    canPlant: (a) => hasAchievement(a, "godMode"),
+  },
+  {
+    type: "clover4",
+    name: "Four-Leaf Clover",
+    cost: 75,
+    growHours: 36,
+    emoji: "🍀",
+    size: "text-2xl",
+    rarity: 4,
+    canPlant: (a) => hasAchievement(a, "clover4"),
+  },
+  {
+    type: "cactus",
+    name: "Cactus",
+    cost: 100,
+    growHours: 48,
+    emoji: "🌵",
+    size: "text-4xl",
+    rarity: 5,
+    canPlant: (a) => hasAchievement(a, "cactus"),
+  },
+  {
+    type: "bamboo",
+    name: "Bamboo",
+    cost: 100,
+    growHours: 72,
+    emoji: "🎍",
+    size: "text-3xl",
+    rarity: 5,
+    canPlant: (a) => hasAchievement(a, "bamboo"),
+  },
+];
+
+function hasAchievement(achievements: AchievementState[], id: string): boolean {
+  return achievements.some((a) => a.id === id && a.status === "claimed");
+}
+
+export function getPlantType(type: string): PlantType | undefined {
+  return PLANT_TYPES.find((p) => p.type === type);
+}

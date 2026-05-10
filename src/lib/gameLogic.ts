@@ -1,4 +1,5 @@
 import { Plant } from "./types";
+import { getPlantType, GROWTH_LEVELS } from "./plants";
 
 export function getXPForLevel(level: number): number {
   return level * 100;
@@ -22,51 +23,44 @@ export function addXP(currentXP: number, currentLevel: number, amount: number): 
   return { xp, level, leveledUp };
 }
 
-const STAGE_0_DURATION = 2 * 60 * 60 * 1000;  // 2 hours
-const STAGE_1_DURATION = 6 * 60 * 60 * 1000;  // 6 hours
-
-export function getPlantStage(plant: Plant): number {
-  const elapsed = Date.now() - plant.plantedAt;
-  let stage = 0;
-  if (elapsed >= STAGE_0_DURATION) stage = 1;
-  if (elapsed >= STAGE_0_DURATION + STAGE_1_DURATION) stage = 2;
-  return Math.min(stage + plant.upgrades, 5);
-}
-
-export interface PlantProgress {
-  stage: number;
+export interface PlantGrowth {
   isGrowing: boolean;
   progress: number;
   remainingMs: number;
   totalMs: number;
+  growthLevel: number;
 }
 
-export function getPlantProgress(plant: Plant): PlantProgress {
-  const elapsed = Date.now() - plant.plantedAt;
-  let timeStage = 0;
-  let progress = 0;
-  let remainingMs = 0;
-  let totalMs = 0;
-
-  if (elapsed < STAGE_0_DURATION) {
-    timeStage = 0;
-    totalMs = STAGE_0_DURATION;
-    remainingMs = STAGE_0_DURATION - elapsed;
-    progress = Math.min(1, elapsed / STAGE_0_DURATION);
-  } else if (elapsed < STAGE_0_DURATION + STAGE_1_DURATION) {
-    timeStage = 1;
-    const stageElapsed = elapsed - STAGE_0_DURATION;
-    totalMs = STAGE_1_DURATION;
-    remainingMs = STAGE_1_DURATION - stageElapsed;
-    progress = Math.min(1, stageElapsed / STAGE_1_DURATION);
-  } else {
-    timeStage = 2;
+export function getPlantGrowth(plant: Plant): PlantGrowth {
+  const def = getPlantType(plant.type);
+  if (!def) {
+    return { isGrowing: false, progress: 1, remainingMs: 0, totalMs: 0, growthLevel: plant.growthLevel };
   }
 
-  const stage = Math.min(timeStage + plant.upgrades, 5);
-  const isGrowing = timeStage < 2;
+  const growMult = GROWTH_LEVELS[plant.growthLevel]?.multiplier.grow ?? 0;
+  const totalMs = growMult === 0 ? 0 : def.growHours * growMult * 3600000;
 
-  return { stage, isGrowing, progress, remainingMs, totalMs };
+  if (totalMs === 0) {
+    return { isGrowing: false, progress: 1, remainingMs: 0, totalMs: 0, growthLevel: plant.growthLevel };
+  }
+
+  const elapsed = Date.now() - plant.plantedAt;
+  const progress = Math.min(1, elapsed / totalMs);
+  const remainingMs = Math.max(0, totalMs - elapsed);
+
+  return {
+    isGrowing: progress < 1,
+    progress,
+    remainingMs,
+    totalMs,
+    growthLevel: plant.growthLevel,
+  };
+}
+
+export function getPlantScaleSaturate(plant: Plant): string {
+  const level = GROWTH_LEVELS[plant.growthLevel];
+  if (!level) return "scale-75 saturate-[0.5]";
+  return `${level.scale} ${level.saturate}`.trim() || "scale-75 saturate-[0.5]";
 }
 
 export function formatTimeRemaining(ms: number): string {
@@ -78,24 +72,3 @@ export function formatTimeRemaining(ms: number): string {
   if (hours > 0) return `${hours}ч`;
   return `${minutes}м`;
 }
-
-const STAGE_SPRITE_BASE: Record<number, number> = { 0: 1, 1: 3, 2: 5, 3: 7, 4: 8, 5: 10 };
-
-export function getPlantSpriteSrc(plant: Plant): string {
-  const progress = getPlantProgress(plant);
-  const base = STAGE_SPRITE_BASE[progress.stage] ?? 1;
-  const offset = progress.isGrowing && progress.progress > 0.5 ? 1 : 0;
-  const spriteIndex = Math.min(10, base + (progress.stage < 3 ? offset : 0));
-  return `/trees/${plant.variant}/${spriteIndex}.png`;
-}
-
-export const STAGE_NAMES = [
-  "Семя",
-  "Росток",
-  "Юный",
-  "Растущий",
-  "Взрослый",
-  "Цветущий",
-];
-
-export { STAGE_0_DURATION, STAGE_1_DURATION };

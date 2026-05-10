@@ -3,14 +3,56 @@ export interface Habit {
   name: string;
   completions: number;
   createdAt: number;
+  isDaily: boolean;
+}
+
+export type RarityLevel = 1 | 2 | 3 | 4 | 5;
+
+export interface RarityInfo {
+  name: string;
+  bgColor: string;
+}
+
+export interface PlantType {
+  type: string;
+  name: string;
+  cost: number;
+  growHours: number;
+  emoji: string;
+  size: string;
+  rarity: RarityLevel;
+  canPlant: (achievements: AchievementState[]) => boolean;
+}
+
+export interface GrowthLevelInfo {
+  multiplier: { grow: number; cost: number };
+  scale: string;
+  saturate: string;
 }
 
 export interface Plant {
   id: string;
-  variant: string;
-  color: string;
+  type: string;
   plantedAt: number;
-  upgrades: number;
+  growthLevel: number;
+}
+
+export type AchievementStatus = "locked" | "unlocked" | "claimed";
+
+export interface AchievementState {
+  id: string;
+  status: AchievementStatus;
+}
+
+export interface AchievementDef {
+  id: string;
+  emoji: string;
+  name: string;
+  description: string;
+  isUnlocked: (state: GameState) => boolean;
+  getProgress: (state: GameState) => { current: number; target: number };
+  rewardCrystals: number;
+  rewardFlower?: boolean;
 }
 
 export interface GameState {
@@ -20,19 +62,13 @@ export interface GameState {
   habits: Habit[];
   plants: (Plant | null)[];
   inventory: Plant[];
+  streak: number;
+  lastCompletionDate: string;
+  lastResetDate: string;
+  achievements: AchievementState[];
 }
-
-export const FLOWER_COLORS = [
-  "#FF6B6B", "#FFD93D", "#FF922B", "#CC5DE8",
-  "#4D96FF", "#F06595", "#20C997", "#FCC419",
-  "#FF8787", "#74C0FC", "#DA77F2", "#FFA94D",
-];
-
-export const TREE_VARIANTS = ["tree_1", "tree_2"];
 
 export const MAX_HABITS = 50;
 export const MAX_PLANTS = 30;
 export const XP_PER_COMPLETION = 10;
 export const CRYSTALS_PER_COMPLETION = 10;
-export const PLANT_PRICE = 50;
-export const UPGRADE_PRICE = 30;
