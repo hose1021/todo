@@ -67,7 +67,7 @@ export default function ShopSheet({
                 className={`flex flex-col items-center gap-1 rounded-lg border px-3 py-2 transition-all ${
                   canAfford
                     ? `${rarity.bgColor} border-current/20 shadow-xs shadow-black/20 hover:brightness-110 active:scale-[0.97]`
-                    : "cursor-not-allowed border-[#303b47] bg-[#222b36] opacity-50"
+                    : `cursor-not-allowed border-[#303b47] ${rarity.bgColor} opacity-50`
                 }`}
               >
                 <span className="select-none leading-none text-2xl">
