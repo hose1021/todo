@@ -55,50 +55,59 @@ export default function HelpModal({ show, onClose }: HelpModalProps) {
           <div>
             <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">Привычки</h3>
             <p className="mt-1 text-[#8795a4] text-xs">
-              Добавляй привычки, кликай ✓ чтобы выполнить. Каждое выполнение даёт +10 XP и +10 💎.
-              Отметь ↻ чтобы привычка сбрасывалась каждый день.
+              Добавь привычку, нажми ✓ чтобы выполнить — получи +10 XP.
+              Свайп вправо = выполнить, свайп влево = удалить.
+              ↻ делает привычку ежедневной (сбрасывается каждые сутки).
             </p>
           </div>
 
           <div>
             <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">XP и уровни</h3>
             <p className="mt-1 text-[#8795a4] text-xs">
-              Уровень повышается каждые level×100 XP (1: 100, 2: 200, 3: 300...).
-              При повышении уровня — конфетти! 🎉
-            </p>
-          </div>
-
-          <div>
-            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">Кристаллы 💎</h3>
-            <p className="mt-1 text-[#8795a4] text-xs">
-              За 💎 можно купить растение (50 💎) в магазине и улучшить его (30 💎 за уровень).
-              Удаление растения возвращает все потраченные 💎.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">Рост растений</h3>
-            <p className="mt-1 text-[#8795a4] text-xs">
-              Стадии 0→1: 2 часа, 1→2: 6 часов (автоматически).
-              Стадии 3→5: только через улучшение за 💎.
-              Максимальный уровень — 5 (Цветущий).
+              Уровень растёт каждые <span className="text-[#dce8ef]">уровень × 100 XP</span>.
+              При повышении — конфетти 🎉.
             </p>
           </div>
 
           <div>
             <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">Серия 🔥</h3>
             <p className="mt-1 text-[#8795a4] text-xs">
-              Выполняй хотя бы одну привычку каждый день — счётчик дней подряд растёт.
-              Пропустил день — серия сбрасывается.
+              Выполняй хотя бы одну привычку каждый день — серия растёт.
+              Пропустил день — сброс.
             </p>
           </div>
 
           <div>
-            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">Горячие клавиши</h3>
+            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">Ачивки 🏆</h3>
             <p className="mt-1 text-[#8795a4] text-xs">
-              <kbd className="rounded bg-[#2a3440] px-1 py-px text-[10px]">Enter</kbd> — выполнить выбранную привычку
-              <br />
-              <kbd className="rounded bg-[#2a3440] px-1 py-px text-[10px]">Escape</kbd> — снять выделение
+              Выполняй условия — получай ачивки. Награда: 💎 кристаллы или особые растения.
+              Ачивки открывают новые виды растений в магазине.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">Кристаллы 💎</h3>
+            <p className="mt-1 text-[#8795a4] text-xs">
+              Зарабатываются только через ачивки.
+              Трать на покупку и улучшение растений в магазине.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">Магазин 🛒</h3>
+            <p className="mt-1 text-[#8795a4] text-xs">
+              16 видов растений — от обычных до легендарных. Цена: 5–100 💎.
+              Новые виды открываются через ачивки.
+              Горизонтальный скролл по редкости.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">Сад 🌿</h3>
+            <p className="mt-1 text-[#8795a4] text-xs">
+              Сетка 6×6 (36 клеток). Купи растение → нажми в инвентаре → выбери клетку.
+              Долгое нажатие — быстрый выбор. Улучшай до 3 уровня за 💎.
+              Во время роста показывается 🌱 и прогресс-бар.
             </p>
           </div>
         </div>

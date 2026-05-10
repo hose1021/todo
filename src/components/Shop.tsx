@@ -1,6 +1,6 @@
 "use client";
 
-import { PLANT_TYPES, RARITY_LEVELS, getPlantType } from "@/lib/plants";
+import { PLANT_TYPES, RARITY_LEVELS } from "@/lib/plants";
 import { AchievementState } from "@/lib/types";
 
 interface ShopProps {
@@ -15,7 +15,7 @@ export default function Shop({ crystals, achievements, onBuy }: ShopProps) {
       <h3 className="px-1 pb-2 text-xs font-black uppercase tracking-[0.18em] text-[#91a0af]">
         Магазин растений
       </h3>
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10">
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
         {PLANT_TYPES.map((def) => {
           const unlocked = def.canPlant(achievements);
           const canAfford = crystals >= def.cost && unlocked;
@@ -39,17 +39,15 @@ export default function Shop({ crystals, achievements, onBuy }: ShopProps) {
                   : "cursor-not-allowed border-[#303b47] opacity-50"
               }`}
             >
-              <span className={`select-none leading-none ${def.size}`}>
+              <span className={`select-none leading-none text-4xl`}>
                 {def.emoji}
               </span>
               <div className="w-full text-center">
-                <p className="truncate text-[9px] font-black text-[#dce8f0]">
-                  {def.name}
-                </p>
-                <p className="text-[9px] font-bold text-[#a5d6b8]">
+                <p className="text-sm font-black text-[#dce8f0]">{def.name}</p>
+                <p className="font-bold text-xs text-[#a5d6b8]">
                   {def.cost} 💎
                 </p>
-                <p className="truncate text-[8px] font-semibold text-[#657486]">
+                <p className="text-xs font-semibold text-[#657486]">
                   {rarity.name}
                 </p>
               </div>

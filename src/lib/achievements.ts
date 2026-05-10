@@ -22,7 +22,7 @@ function maxGrowthLevel(state: GameState): number {
 }
 
 function cornersFilled(state: GameState): number {
-  const corners = [0, 4, 24, 29];
+  const corners = [0, 5, 30, 35];
   let filled = 0;
   for (const idx of corners) {
     if (state.plants[idx] !== null) filled++;
@@ -158,12 +158,12 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     rewardCrystals: 75,
   },
   {
-    id: "30flowers",
+    id: "36flowers",
     emoji: "🌻",
-    name: "Я в листьях верю",
-    description: "Заполнить весь сад (30 цветов)",
-    isUnlocked: (s) => plantedCount(s) >= 30,
-    getProgress: (s) => ({ current: Math.min(plantedCount(s), 30), target: 30 }),
+    name: "Полный сад",
+    description: "Заполнить весь сад (36 цветов)",
+    isUnlocked: (s) => plantedCount(s) >= 36,
+    getProgress: (s) => ({ current: Math.min(plantedCount(s), 36), target: 36 }),
     rewardCrystals: 250,
   },
   {

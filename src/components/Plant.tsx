@@ -14,7 +14,7 @@ export default memo(function Plant({ plant, highlighted }: PlantProps) {
   const def = getPlantType(plant.type);
   const growth = getPlantGrowth(plant);
   const scaleSaturate = getPlantScaleSaturate(plant);
-  const emoji = growth.isGrowing ? SPROUT_EMOJI : def?.emoji ?? SPROUT_EMOJI;
+  const emoji = growth.isGrowing ? SPROUT_EMOJI : (def?.emoji ?? SPROUT_EMOJI);
   const name = def?.name ?? plant.type;
   const levelName = growth.growthLevel === 1 ? "" : ` Lv${growth.growthLevel}`;
 
@@ -38,11 +38,6 @@ export default memo(function Plant({ plant, highlighted }: PlantProps) {
       >
         {emoji}
       </span>
-      {highlighted && (
-        <span className="absolute -bottom-4 max-w-[92px] truncate rounded-md border border-[#526474] bg-[#202833]/95 px-2 py-0.5 text-[10px] font-semibold text-[#dce8f0] shadow-lg shadow-black/30">
-          {name}{levelName}
-        </span>
-      )}
     </div>
   );
 });

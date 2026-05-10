@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useGameState } from "@/hooks/useGameState";
 import Garden from "@/components/Garden";
 import HabitList from "@/components/HabitList";
@@ -58,6 +58,17 @@ export default function Home() {
     string | null
   >(null);
   const [showAddHabit, setShowAddHabit] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
+
+  const claimableCount = achievements.filter(
+    (a) => a.status === "unlocked",
+  ).length;
+
+  const shopRef = useRef<HTMLDivElement>(null);
+
+  const scrollToShop = () => {
+    shopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -76,6 +87,7 @@ export default function Home() {
         setPlantingMode(false);
         setSelectedInventoryPlantId(null);
         setShowAddHabit(false);
+        setShowAchievements(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -96,13 +108,13 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-16">
       <Confetti show={levelUp} />
       <HelpModal show={showHelp} onClose={closeHelp} />
 
-      <header className="sticky top-0 z-40 border-b border-[#33404d] bg-[#202833]/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-4xl items-center gap-3 px-3 py-3 sm:px-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#3a4653] bg-[#242f3a] text-xl shadow-lg shadow-black/20">
+      <header className="sticky top-0 z-40 border-b border-[#33404d] bg-[#202833]/95 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-4xl items-center gap-2 px-2 py-2 sm:gap-3 sm:px-4 sm:py-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-[#3a4653] bg-[#242f3a] text-xl shadow-lg shadow-black/20">
             🌿
           </div>
           <button
@@ -112,19 +124,25 @@ export default function Home() {
           >
             ?
           </button>
-          <div className="mr-auto min-w-0">
-            <h1 className="truncate text-lg font-black uppercase tracking-[0.12em] text-[#edf5f8]">
-              Habbit Garden
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 rounded-lg border border-[#3a4653] bg-[#242f3a]/90 px-3 py-2 text-sm font-black text-[#a5d6b8] shadow-lg shadow-black/20">
+          <h1 className="hidden truncate text-base font-black uppercase tracking-[0.1em] text-[#edf5f8] sm:block sm:text-lg">
+            Habbit Garden
+          </h1>
+          <div className="flex ml-auto items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1 rounded-lg border border-[#3a4653] bg-[#242f3a]/90 px-2 py-1.5 text-xs font-black text-[#a5d6b8] shadow-lg shadow-black/20 sm:px-3 sm:py-2 sm:text-sm">
               <span>💎</span>
               <span>{crystals}</span>
             </div>
+            {streak > 0 && (
+              <div
+                className="flex items-center gap-0.5 rounded-lg border border-[#4a5a3e] bg-[#2a3a2a]/90 px-1.5 py-1.5 text-[10px] font-black text-[#c5e898] shadow-lg shadow-black/20 sm:px-2 sm:py-2 sm:text-[11px]"
+                title="Дней подряд"
+              >
+                🔥{streak}
+              </div>
+            )}
             <button
               onClick={toggleMute}
-              className={`flex h-[38px] w-[38px] items-center justify-center rounded-lg border text-base transition-all shadow-lg shadow-black/20 ${
+              className={`hidden h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border text-base transition-all shadow-lg shadow-black/20 sm:flex ${
                 isMuted
                   ? "border-[#543a3a] bg-[#3a2a2a]/90 text-[#887777]"
                   : "border-[#3a4653] bg-[#242f3a]/90 text-[#c0c8d0] hover:bg-[#2d3a47]"
@@ -133,22 +151,21 @@ export default function Home() {
             >
               {isMuted ? "🔇" : "🔊"}
             </button>
-            {streak > 0 && (
-              <div
-                className="flex items-center gap-1 rounded-lg border border-[#4a5a3e] bg-[#2a3a2a]/90 px-2 py-2 text-[11px] font-black text-[#c5e898] shadow-lg shadow-black/20"
-                title="Дней подряд"
-              >
-                🔥{streak}
-              </div>
-            )}
-            <div className="w-[180px] sm:w-[240px]">
+          </div>
+        </div>
+        <div className="mx-auto max-w-4xl px-2 pb-2 sm:hidden">
+          <XPBar xp={xp} level={level} />
+        </div>
+        <div className="hidden sm:block">
+          <div className="mx-auto flex max-w-4xl items-center px-4 pb-3">
+            <div className="w-full">
               <XPBar xp={xp} level={level} />
             </div>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl space-y-4 px-3 py-4 sm:px-4 sm:py-6">
+      <main className="mx-auto max-w-4xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-6">
         <HabitList
           habits={habits}
           selectedId={selectedHabitId}
@@ -164,10 +181,23 @@ export default function Home() {
           habitsFull={habits.length >= MAX_HABITS}
         />
 
-        <Shop
-          crystals={crystals}
-          achievements={achievements}
-          onBuy={buyPlant}
+        <div ref={shopRef}>
+          <Shop
+            crystals={crystals}
+            achievements={achievements}
+            onBuy={buyPlant}
+          />
+        </div>
+
+        <InventoryStrip
+          inventory={inventory}
+          plantingMode={plantingMode}
+          selectedPlantId={selectedInventoryPlantId}
+          onSelect={setSelectedInventoryPlantId}
+          onRequestPlant={(plantId) => {
+            setSelectedInventoryPlantId(plantId);
+            setPlantingMode(true);
+          }}
         />
 
         <Garden
@@ -191,24 +221,9 @@ export default function Home() {
             setSelectedSlot(index);
           }}
           onRemove={removePlant}
+          claimableCount={claimableCount}
+          onAchievements={() => setShowAchievements(true)}
           crystals={crystals}
-        />
-
-        <InventoryStrip
-          inventory={inventory}
-          plantingMode={plantingMode}
-          selectedPlantId={selectedInventoryPlantId}
-          onSelect={setSelectedInventoryPlantId}
-          onRequestPlant={(plantId) => {
-            setSelectedInventoryPlantId(plantId);
-            setPlantingMode(true);
-          }}
-        />
-
-        <AchievementPanel
-          achievements={achievements}
-          onClaim={claimAchievement}
-          getProgressFor={getProgressFor}
         />
 
         {showAddHabit && (
@@ -218,6 +233,24 @@ export default function Home() {
             embedded={false}
             onClose={() => setShowAddHabit(false)}
           />
+        )}
+
+        {showAchievements && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowAchievements(false)}
+          >
+            <div
+              className="max-h-[80vh] w-full max-w-4xl overflow-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <AchievementPanel
+                achievements={achievements}
+                onClaim={claimAchievement}
+                getProgressFor={getProgressFor}
+              />
+            </div>
+          </div>
         )}
 
         {habits.length > 0 && (
@@ -249,7 +282,33 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="py-6 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5c6b7a]">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-[#33404d] bg-[#1b222c]/95 backdrop-blur-xl sm:hidden">
+        <div className="mx-auto flex w-full max-w-4xl items-center justify-around px-2 py-2">
+          <div className="flex items-center gap-1 rounded-lg border border-[#3a4653] bg-[#242f3a] px-3 py-2 text-sm font-black text-[#a5d6b8]">
+            <span>💎</span>
+            <span>{crystals}</span>
+          </div>
+          <button
+            onClick={scrollToShop}
+            className="flex items-center gap-1 rounded-lg border border-[#4a5a3e] bg-[#2a3a2a] px-3 py-2 text-xs font-black text-[#c5e898] active:scale-95"
+          >
+            🛒 Магазин
+          </button>
+          <button
+            onClick={() => setShowAchievements(true)}
+            className="relative flex items-center gap-1 rounded-lg border border-[#4a5a3e] bg-[#2a3a2a] px-3 py-2 text-xs font-black text-[#c5e898] active:scale-95"
+          >
+            🏆 Достижения
+            {claimableCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d5a63d] px-1 text-[9px] font-black text-[#1f2630]">
+                {claimableCount}
+              </span>
+            )}
+          </button>
+        </div>
+      </nav>
+
+      <footer className="hidden py-6 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5c6b7a] sm:block">
         Выполняй привычки • получай XP • покупай и выращивай сад
       </footer>
     </div>

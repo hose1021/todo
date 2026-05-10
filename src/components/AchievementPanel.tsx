@@ -52,7 +52,7 @@ export default function AchievementPanel({
   return (
     <div className="rounded-[10px] border border-[#33404d] bg-[#222b36] p-3 shadow-lg shadow-black/20">
       <h3 className="px-1 pb-3 text-xs font-black uppercase tracking-[0.18em] text-[#91a0af]">
-        Ачивки
+        Достижения
       </h3>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         {items.map(({ def, status }) => {
@@ -81,10 +81,10 @@ export default function AchievementPanel({
               <div className="flex items-center gap-1.5">
                 <span className="text-lg leading-none">{def.emoji}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[11px] font-black uppercase tracking-[0.06em] text-[#e0e9f0]">
+                  <p className="truncate text-xs font-black uppercase tracking-[0.06em] text-[#e0e9f0]">
                     {def.name}
                   </p>
-                  <p className="truncate text-[10px] text-[#6e7d8b]">
+                  <p className="truncate text-[11px] text-[#6e7d8b]">
                     {def.description}
                   </p>
                 </div>
@@ -98,20 +98,20 @@ export default function AchievementPanel({
                 />
               </div>
               {status === "locked" && (
-                <span className="text-center text-[10px] text-[#4d5a68]">
+                <span className="text-center text-[11px] text-[#4d5a68]">
                   {progress.current}/{progress.target}
                 </span>
               )}
               {status === "unlocked" && (
                 <button
                   onClick={() => onClaim(def.id)}
-                  className="mt-0.5 w-full rounded-md bg-[#d5a63d] py-1 text-[10px] font-black uppercase tracking-[0.1em] text-[#1f2630] hover:bg-[#edbe52] active:scale-[0.97] transition-all"
+                  className="mt-0.5 w-full rounded-md bg-[#d5a63d] py-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-[#1f2630] hover:bg-[#edbe52] active:scale-[0.97] transition-all"
                 >
                   Взять
                 </button>
               )}
               {status === "claimed" && (
-                <span className="mt-0.5 text-center text-[10px] font-bold text-[#5d8a6e]">
+                <span className="mt-0.5 text-center text-[11px] font-bold text-[#5d8a6e]">
                   ✓ Получено
                 </span>
               )}

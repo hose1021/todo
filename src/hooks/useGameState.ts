@@ -201,8 +201,10 @@ export function useGameState() {
         setTimeout(() => setLevelUp(true), 100);
         setTimeout(() => setLevelUp(false), 2500);
         playLevelUpSound();
+        try { navigator.vibrate?.([15, 30, 15]); } catch { /* not supported */ }
       } else {
         playCompleteSound();
+        try { navigator.vibrate?.(10); } catch { /* not supported */ }
       }
       return evaluateAchievements({ ...s, habits, xp: updated.xp, level: updated.level, streak, lastCompletionDate });
     });
