@@ -34,7 +34,7 @@ export default function HelpModal({ show, onClose }: HelpModalProps) {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4" onClick={onClose}>
       <div
         className="max-h-[80vh] w-full max-w-md overflow-auto rounded-xl border border-[#445566] bg-[#1e2731] p-6 shadow-2xl shadow-black/40"
         onClick={(e) => e.stopPropagation()}
@@ -53,7 +53,7 @@ export default function HelpModal({ show, onClose }: HelpModalProps) {
 
         <div className="space-y-4 text-sm leading-relaxed text-[#c0cbd4]">
           <div>
-            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">Привычки</h3>
+            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-widest">Привычки</h3>
             <p className="mt-1 text-[#8795a4] text-xs">
               Добавь привычку, нажми ✓ чтобы выполнить — получи +10 XP.
               Свайп вправо = выполнить, свайп влево = удалить.
@@ -62,7 +62,7 @@ export default function HelpModal({ show, onClose }: HelpModalProps) {
           </div>
 
           <div>
-            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">XP и уровни</h3>
+            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-widest">XP и уровни</h3>
             <p className="mt-1 text-[#8795a4] text-xs">
               Уровень растёт каждые <span className="text-[#dce8ef]">уровень × 100 XP</span>.
               При повышении — конфетти 🎉.
@@ -70,7 +70,7 @@ export default function HelpModal({ show, onClose }: HelpModalProps) {
           </div>
 
           <div>
-            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">Серия 🔥</h3>
+            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-widest">Серия 🔥</h3>
             <p className="mt-1 text-[#8795a4] text-xs">
               Выполняй хотя бы одну привычку каждый день — серия растёт.
               Пропустил день — сброс.
@@ -78,7 +78,7 @@ export default function HelpModal({ show, onClose }: HelpModalProps) {
           </div>
 
           <div>
-            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">Ачивки 🏆</h3>
+            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-widest">Ачивки 🏆</h3>
             <p className="mt-1 text-[#8795a4] text-xs">
               Выполняй условия — получай ачивки. Награда: 💎 кристаллы или особые растения.
               Ачивки открывают новые виды растений в магазине.
@@ -86,7 +86,7 @@ export default function HelpModal({ show, onClose }: HelpModalProps) {
           </div>
 
           <div>
-            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">Кристаллы 💎</h3>
+            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-widest">Кристаллы 💎</h3>
             <p className="mt-1 text-[#8795a4] text-xs">
               Зарабатываются только через ачивки.
               Трать на покупку и улучшение растений в магазине.
@@ -94,7 +94,7 @@ export default function HelpModal({ show, onClose }: HelpModalProps) {
           </div>
 
           <div>
-            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">Магазин 🛒</h3>
+            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-widest">Магазин 🛒</h3>
             <p className="mt-1 text-[#8795a4] text-xs">
               16 видов растений — от обычных до легендарных. Цена: 5–100 💎.
               Новые виды открываются через ачивки.
@@ -103,7 +103,7 @@ export default function HelpModal({ show, onClose }: HelpModalProps) {
           </div>
 
           <div>
-            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-[0.1em]">Сад 🌿</h3>
+            <h3 className="font-black text-[#d5a63d] text-xs uppercase tracking-widest">Сад 🌿</h3>
             <p className="mt-1 text-[#8795a4] text-xs">
               Сетка 6×6 (36 клеток). Купи растение → нажми в инвентаре → выбери клетку.
               Долгое нажатие — быстрый выбор. Улучшай до 3 уровня за 💎.

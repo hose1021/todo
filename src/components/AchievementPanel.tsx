@@ -105,7 +105,7 @@ export default function AchievementPanel({
               {status === "unlocked" && (
                 <button
                   onClick={() => onClaim(def.id)}
-                  className="mt-0.5 w-full rounded-md bg-[#d5a63d] py-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-[#1f2630] hover:bg-[#edbe52] active:scale-[0.97] transition-all"
+                  className="mt-0.5 w-full rounded-md bg-[#d5a63d] py-1.5 text-[11px] font-black uppercase tracking-widest text-[#1f2630] hover:bg-[#edbe52] active:scale-[0.97] transition-all"
                 >
                   Взять
                 </button>

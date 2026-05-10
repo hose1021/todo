@@ -301,7 +301,7 @@ function PlantDetailPanel({
           </p>
           <div className="h-2 w-full overflow-hidden rounded-full bg-[#1b222c]">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-[#4d9e6d] to-[#6ecf8a] transition-all duration-1000"
+              className="h-full rounded-full bg-linear-to-r from-[#4d9e6d] to-[#6ecf8a] transition-all duration-1000"
               style={{ width: `${Math.round(growth.progress * 100)}%` }}
             />
           </div>
@@ -425,7 +425,7 @@ function GardenCell({
             <PlantComp plant={plant} highlighted={isSelected} />
           </div>
           {canUpgrade && (
-            <span className="absolute bottom-0.5 rounded bg-[#d5a63d]/20 px-1 py-px text-[9px] font-black text-[#edbe52] leading-none sm:text-[10px]">
+            <span className="absolute bottom-0.5 rounded-sm bg-[#d5a63d]/20 px-1 py-px text-[9px] font-black text-[#edbe52] leading-none sm:text-[10px]">
               ⬆{upgradeCost}
             </span>
           )}

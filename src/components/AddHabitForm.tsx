@@ -95,7 +95,7 @@ export default function AddHabitForm({
           }}
           placeholder="Название привычки"
           maxLength={40}
-          className="min-w-0 flex-1 rounded-md border border-[#3a4653] bg-[#141b24] px-3 py-1.5 text-xs font-bold text-[#e5edf3] outline-none transition-all placeholder:text-[#657486] focus:border-[#607d73] focus:ring-2 focus:ring-[#2f4a45]"
+          className="min-w-0 flex-1 rounded-md border border-[#3a4653] bg-[#141b24] px-3 py-1.5 text-xs font-bold text-[#e5edf3] outline-hidden transition-all placeholder:text-[#657486] focus:border-[#607d73] focus:ring-2 focus:ring-[#2f4a45]"
         />
 
         <button
@@ -127,7 +127,7 @@ export default function AddHabitForm({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
       onClick={handleCancel}
     >
       <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>

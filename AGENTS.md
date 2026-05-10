@@ -2,7 +2,7 @@
 
 ## Project overview
 
-Next.js 16 (Turbopack default) + React 19 + TypeScript 6 + Tailwind CSS 3. Static export (`output: "export"`) — no server at runtime.
+Next.js 16 (Turbopack default) + React 19 + TypeScript 6 + Tailwind CSS 4. Static export (`output: "export"`) — no server at runtime.
 Single client-side page, no API routes, no database. Russian-language UI. Inter font via `next/font/google`.
 shadcn/ui (`Sheet`, `Popover`, `Button`) via `@base-ui/react`. `components.json` is the shadcn config.
 Package manager: `bun` (`bun.lock` committed). `npm run <script>` also works.
@@ -25,7 +25,7 @@ src/
 ├── app/
 │   ├── layout.tsx       # ONLY server component (no "use client"), Inter font + Russian metadata
 │   ├── page.tsx          # single page, wires everything, bottom nav on mobile
-│   └── globals.css       # @tailwind directives only + dark gradient background
+│   └── globals.css       # @import 'tailwindcss' + @theme (custom keyframes) + @layer base (dark theme, scrollbar, body)
 ├── components/
 │   ├── ui/               # shadcn wrappers: button.tsx, popover.tsx, sheet.tsx
 │   ├── Garden.tsx        # 6×6 grid (MAX_PLANTS=36), long-press select, Popover (desktop) / Sheet (mobile) detail
@@ -55,7 +55,8 @@ tests/
 
 - `next.config.mjs`: `basePath` from `NEXT_PUBLIC_BASE_PATH` env (empty by default). Static export to `out/`.
 - `vitest.config.ts`: aliases `@` → `./src` matching tsconfig paths.
-- shadcn init overwrites `globals.css` — restore to `@tailwind` directives only. Do NOT import `tw-animate-css` or `shadcn/tailwind.css` (Tailwind 3 incompatible), even though `tw-animate-css` is in `package.json` (pulled by shadcn init).
+- Tailwind 4 uses `@tailwindcss/postcss` in `postcss.config.mjs` (not `tailwindcss`). No `autoprefixer` needed.
+- shadcn init overwrites `globals.css` — restore to `@import "tailwindcss"` + `@theme` block. Do NOT import `tw-animate-css` or `shadcn/tailwind.css` (Tailwind 4 incompatible), even though `tw-animate-css` is in `package.json` (pulled by shadcn init).
 - `package.json` contains `shadcn` CLI. To add shadcn components: `npx shadcn add <name>`.
 
 ## Key conventions

@@ -122,7 +122,7 @@ export default function HabitList({
           </p>
           <button
             onClick={onAddHabit}
-            className="rounded-lg border border-[#456052] bg-[#2e4442] px-6 py-3 text-sm font-black tracking-[0.1em] text-[#dcf7e7] shadow-lg shadow-black/20 hover:bg-[#36514d] active:scale-[0.98] transition-all"
+            className="rounded-lg border border-[#456052] bg-[#2e4442] px-6 py-3 text-sm font-black tracking-widest text-[#dcf7e7] shadow-lg shadow-black/20 hover:bg-[#36514d] active:scale-[0.98] transition-all"
           >
             + Добавить привычку
           </button>
@@ -170,7 +170,7 @@ export default function HabitList({
         <button
           onClick={onAddHabit}
           disabled={habitsFull}
-          className={`mt-3 w-full rounded-lg border px-4 py-3 text-sm font-black tracking-[0.1em] transition-all ${
+          className={`mt-3 w-full rounded-lg border px-4 py-3 text-sm font-black tracking-widest transition-all ${
             habitsFull
               ? "cursor-not-allowed border-[#323b46] bg-[#242b34] text-[#596675]"
               : "border-[#456052] bg-[#2e4442] text-[#dcf7e7] shadow-md shadow-black/20 hover:bg-[#36514d] active:scale-[0.98]"
@@ -280,14 +280,14 @@ function HabitRow({
             }}
             onClick={(e) => e.stopPropagation()}
             maxLength={40}
-            className="min-w-0 flex-1 rounded-md border border-[#607d73] bg-[#1b222c] px-2 py-1 text-sm font-black text-[#e5edf3] outline-none"
+            className="min-w-0 flex-1 rounded-md border border-[#607d73] bg-[#1b222c] px-2 py-1 text-sm font-black text-[#e5edf3] outline-hidden"
           />
           <button
             onClick={(e) => {
               e.stopPropagation();
               onSubmitRename();
             }}
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-[#4CAF50] text-[#1f2630] text-xs font-black hover:bg-[#66d06a]"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#4CAF50] text-[#1f2630] text-xs font-black hover:bg-[#66d06a]"
             title="Сохранить"
           >
             ✓
@@ -297,7 +297,7 @@ function HabitRow({
               e.stopPropagation();
               onCancelEdit();
             }}
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-[#667584] hover:bg-[#3a3a3e]"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#667584] hover:bg-[#3a3a3e]"
             title="Отмена"
           >
             ✕
@@ -313,7 +313,7 @@ function HabitRow({
               e.stopPropagation();
               onDelete();
             }}
-            className="flex h-8 flex-shrink-0 items-center rounded-md bg-[#c0392b] px-2 text-[11px] font-black text-white hover:bg-[#e74c3c]"
+            className="flex h-8 shrink-0 items-center rounded-md bg-[#c0392b] px-2 text-[11px] font-black text-white hover:bg-[#e74c3c]"
           >
             Да
           </button>
@@ -322,7 +322,7 @@ function HabitRow({
               e.stopPropagation();
               onCancelDelete();
             }}
-            className="flex h-8 flex-shrink-0 items-center rounded-md border border-[#3a4653] bg-[#242f3a] px-2 text-[11px] font-black text-[#8d9ba8] hover:bg-[#2b3845]"
+            className="flex h-8 shrink-0 items-center rounded-md border border-[#3a4653] bg-[#242f3a] px-2 text-[11px] font-black text-[#8d9ba8] hover:bg-[#2b3845]"
           >
             Нет
           </button>
@@ -343,7 +343,7 @@ function HabitRow({
             <div className="text-[11px] font-semibold text-[#697888]">
               {habit.completions} раз
               {habit.isDaily && (
-                <span className="ml-1 inline-block rounded bg-[#3a4a6e] px-1 py-px text-[10px] font-black text-[#8ab4f8]">
+                <span className="ml-1 inline-block rounded-sm bg-[#3a4a6e] px-1 py-px text-[10px] font-black text-[#8ab4f8]">
                   день
                 </span>
               )}
@@ -355,7 +355,7 @@ function HabitRow({
               e.stopPropagation();
               onToggleDaily();
             }}
-            className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-sm transition-colors ${
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm transition-colors ${
               habit.isDaily
                 ? "bg-[#3a4a6e] text-[#a8c8ff] hover:bg-[#4a5a7e]"
                 : "text-[#3a4653] hover:text-[#8795a4]"
@@ -370,7 +370,7 @@ function HabitRow({
               e.stopPropagation();
               onComplete();
             }}
-            className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-[#31453e] text-[#a8e8bd] shadow-sm transition-all hover:bg-[#3f674d] active:scale-90"
+            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#31453e] text-[#a8e8bd] shadow-xs transition-all hover:bg-[#3f674d] active:scale-90"
             title="Выполнить"
           >
             <svg
@@ -390,7 +390,7 @@ function HabitRow({
             )}
           </button>
 
-          <span className="hidden w-10 flex-shrink-0 text-right text-[11px] font-black text-[#d5a63d] sm:inline">
+          <span className="hidden w-10 shrink-0 text-right text-[11px] font-black text-[#d5a63d] sm:inline">
             +{XP_PER_COMPLETION} XP
           </span>
 
@@ -399,7 +399,7 @@ function HabitRow({
               e.stopPropagation();
               onConfirmDelete();
             }}
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-[#667584] transition-colors hover:bg-[#432d35] hover:text-[#ff8d8d]"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#667584] transition-colors hover:bg-[#432d35] hover:text-[#ff8d8d]"
             title="Удалить"
           >
             <svg

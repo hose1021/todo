@@ -46,7 +46,7 @@ export default function Confetti({ show }: ConfettiProps) {
       {particles.map((p) => (
         <div
           key={p.id}
-          className="absolute rounded-sm"
+          className="absolute rounded-xs"
           style={{
             left: `${p.x}%`,
             top: `${p.y}%`,

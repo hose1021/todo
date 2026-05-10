@@ -1,26 +1,61 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme {
+  --animate-float-up: floatUp 1.2s ease-out forwards;
+
+  @keyframes floatUp {
+    0% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-24px);
+      opacity: 0;
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 @layer base {
-  :root {
-    color-scheme: dark;
-  }
+    :root {
+        color-scheme: dark;
+    }
 
-  * {
-    scrollbar-color: #425061 #202833;
-  }
+    * {
+        scrollbar-color: #425061 #202833;
+    }
 
-  body {
-    @apply min-h-screen;
-    background:
-      radial-gradient(circle at 12% 0%, rgba(78, 95, 111, 0.18), transparent 34%),
-      linear-gradient(180deg, #202833 0%, #1b222c 100%);
-    color: #d9e2ea;
-  }
+    body {
+        @apply min-h-screen;
+        background:
+            radial-gradient(
+                circle at 12% 0%,
+                rgba(78, 95, 111, 0.18),
+                transparent 34%
+            ),
+            linear-gradient(180deg, #202833 0%, #1b222c 100%);
+        color: #d9e2ea;
+    }
 
-  button,
-  input {
-    font: inherit;
-  }
+    button,
+    input {
+        font: inherit;
+    }
 }

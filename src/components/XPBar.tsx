@@ -14,7 +14,7 @@ export default memo(function XPBar({ xp, level }: XPBarProps) {
 
   return (
     <div className="flex items-center gap-3 rounded-lg border border-[#3a4653] bg-[#242f3a]/90 px-3 py-2 shadow-lg shadow-black/20">
-      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-[#d5a63d] text-sm font-black text-[#1f2630] shadow-sm">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#d5a63d] text-sm font-black text-[#1f2630] shadow-xs">
         {level}
       </div>
 

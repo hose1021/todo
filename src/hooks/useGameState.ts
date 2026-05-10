@@ -26,7 +26,6 @@ const initialState: GameState = {
   crystals: 0,
   habits: [],
   plants: Array(MAX_PLANTS).fill(null),
-  inventory: [],
   streak: 0,
   lastCompletionDate: "",
   lastResetDate: getToday(),
@@ -49,9 +48,16 @@ function migratePlant(p: Record<string, unknown>): Plant {
   };
 }
 
+function findEmptySlot(plants: (Plant | null)[]): number {
+  for (let i = 0; i < plants.length; i++) {
+    if (plants[i] === null) return i;
+  }
+  return -1;
+}
+
 function migrateIfNeeded(state: GameState): GameState {
   const raw = state as unknown as Record<string, unknown>;
-  let result: GameState;
+  let result = { ...state };
 
   if (Array.isArray(raw.inventory)) {
     const inventory = (raw.inventory as Record<string, unknown>[]).map(migratePlant);
@@ -59,48 +65,59 @@ function migrateIfNeeded(state: GameState): GameState {
     result = {
       ...state,
       crystals: state.crystals ?? 0,
-      inventory,
       plants,
       streak: typeof raw.streak === "number" ? (raw.streak as number) : 0,
       lastCompletionDate: typeof raw.lastCompletionDate === "string" ? (raw.lastCompletionDate as string) : "",
       lastResetDate: typeof raw.lastResetDate === "string" ? (raw.lastResetDate as string) : getToday(),
     };
+    for (const invPlant of inventory) {
+      const slot = findEmptySlot(result.plants);
+      if (slot >= 0) {
+        const plantsCopy = [...result.plants];
+        plantsCopy[slot] = { ...invPlant, plantedAt: Date.now(), growthLevel: 1 };
+        result.plants = plantsCopy;
+      }
+    }
   } else {
     const oldHabits = state.habits as unknown as (Habit & { plantVariant?: number; color?: string })[];
-    const newHabits: Habit[] = [];
-    const newPlants: (Plant | null)[] = Array(MAX_PLANTS).fill(null);
-    const newInventory: Plant[] = [];
+    const hasOldFormat = oldHabits.some((h) => h !== null && typeof h === "object" && (h as Habit & { plantVariant?: number }).plantVariant !== undefined);
 
-    oldHabits.forEach((h: Habit & { plantVariant?: number; color?: string }, i: number) => {
-      if (h !== null && typeof h === "object") {
-        newHabits.push({
-          id: h.id,
-          name: h.name,
-          completions: h.completions ?? 0,
-          createdAt: h.createdAt ?? Date.now(),
-          isDaily: false,
-        });
-        if (h.plantVariant !== undefined && i < MAX_PLANTS) {
-          newPlants[i] = {
+    if (hasOldFormat) {
+      const newHabits: Habit[] = [];
+      const newPlants: (Plant | null)[] = Array(MAX_PLANTS).fill(null);
+
+      oldHabits.forEach((h: Habit & { plantVariant?: number; color?: string }, i: number) => {
+        if (h !== null && typeof h === "object") {
+          newHabits.push({
             id: h.id,
-            type: "grass",
-            plantedAt: Date.now() - (h.completions ?? 0) * 3600000,
-            growthLevel: Math.max(1, Math.min(3, (h.completions ?? 0))),
-          };
+            name: h.name,
+            completions: h.completions ?? 0,
+            createdAt: h.createdAt ?? Date.now(),
+            isDaily: false,
+          });
+          if (h.plantVariant !== undefined && i < MAX_PLANTS) {
+            newPlants[i] = {
+              id: h.id,
+              type: "grass",
+              plantedAt: Date.now() - (h.completions ?? 0) * 3600000,
+              growthLevel: Math.max(1, Math.min(3, (h.completions ?? 0))),
+            };
+          }
         }
-      }
-    });
+      });
 
-    result = {
-      ...state,
-      crystals: state.crystals ?? 0,
-      habits: newHabits,
-      plants: newPlants,
-      inventory: newInventory,
-      streak: 0,
-      lastCompletionDate: "",
-      lastResetDate: getToday(),
-    };
+      result = {
+        ...state,
+        crystals: state.crystals ?? 0,
+        habits: newHabits,
+        plants: newPlants,
+        streak: 0,
+        lastCompletionDate: "",
+        lastResetDate: getToday(),
+      };
+    } else {
+      result.plants = state.plants.map((p) => p ? migratePlant(p as unknown as Record<string, unknown>) : null);
+    }
   }
 
   result.habits = result.habits.map((h) => ({
@@ -111,6 +128,8 @@ function migrateIfNeeded(state: GameState): GameState {
   if (!result.achievements || !Array.isArray(result.achievements) || result.achievements.length === 0) {
     result.achievements = initAchievementStates();
   }
+
+  delete (result as unknown as Record<string, unknown>).inventory;
 
   return result;
 }
@@ -239,40 +258,27 @@ export function useGameState() {
     playDeleteSound();
   }, []);
 
-  const buyPlant = useCallback((type: string) => {
+  const plantDirectly = useCallback((type: string, slotIndex: number) => {
+    if (slotIndex < 0 || slotIndex >= MAX_PLANTS) return false;
     const def = getPlantType(type);
     if (!def) return false;
-    const cost = def.cost;
-    if (state.crystals < cost) return false;
-    if (state.inventory.length >= 99) return false;
-    const plant: Plant = {
-      id: crypto.randomUUID(),
-      type,
-      plantedAt: 0,
-      growthLevel: 1,
-    };
-    setState((s) => evaluateAchievements({
-      ...s,
-      crystals: s.crystals - cost,
-      inventory: [...s.inventory, plant],
-    }));
-    return true;
-  }, [state.crystals, state.inventory.length]);
-
-  const plantFromInventory = useCallback((plantId: string, slotIndex: number) => {
-    if (slotIndex < 0 || slotIndex >= MAX_PLANTS) return false;
+    let succeeded = false;
     setState((s) => {
       if (s.plants[slotIndex] !== null) return s;
-      const idx = s.inventory.findIndex((p) => p.id === plantId);
-      if (idx === -1) return s;
-      const plant = { ...s.inventory[idx], plantedAt: Date.now(), growthLevel: 1 };
-      const inventory = s.inventory.filter((p) => p.id !== plantId);
+      if (s.crystals < def.cost) return s;
+      const plant: Plant = {
+        id: crypto.randomUUID(),
+        type,
+        plantedAt: Date.now(),
+        growthLevel: 1,
+      };
       const plants = [...s.plants];
       plants[slotIndex] = plant;
       playPlantSound();
-      return evaluateAchievements({ ...s, plants, inventory });
+      succeeded = true;
+      return evaluateAchievements({ ...s, plants, crystals: s.crystals - def.cost });
     });
-    return true;
+    return succeeded;
   }, []);
 
   const upgradePlant = useCallback((slotIndex: number) => {
@@ -338,14 +344,20 @@ export function useGameState() {
         ),
       };
 
-      if (def.rewardFlower && s.inventory.length < 99 && getPlantType(id)) {
-        const plant: Plant = {
-          id: crypto.randomUUID(),
-          type: id,
-          plantedAt: 0,
-          growthLevel: 1,
-        };
-        newState = { ...newState, inventory: [...s.inventory, plant] };
+      if (def.rewardFlower && getPlantType(id)) {
+        const slot = findEmptySlot(s.plants);
+        if (slot >= 0) {
+          const plant: Plant = {
+            id: crypto.randomUUID(),
+            type: id,
+            plantedAt: Date.now(),
+            growthLevel: 1,
+          };
+          const plants = [...s.plants];
+          plants[slot] = plant;
+          playPlantSound();
+          newState = { ...newState, plants };
+        }
       }
 
       return newState;
@@ -359,7 +371,6 @@ export function useGameState() {
     crystals: state.crystals,
     habits: state.habits,
     plants: state.plants,
-    inventory: state.inventory,
     streak: state.streak,
     achievements: state.achievements,
     loaded,
@@ -370,8 +381,7 @@ export function useGameState() {
     deleteHabit,
     renameHabit,
     toggleDailyHabit,
-    buyPlant,
-    plantFromInventory,
+    plantDirectly,
     upgradePlant,
     removePlant,
     claimAchievement,

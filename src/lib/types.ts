@@ -61,7 +61,6 @@ export interface GameState {
   crystals: number;
   habits: Habit[];
   plants: (Plant | null)[];
-  inventory: Plant[];
   streak: number;
   lastCompletionDate: string;
   lastResetDate: string;
