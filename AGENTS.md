@@ -58,6 +58,7 @@ tests/
 - Tailwind 4 uses `@tailwindcss/postcss` in `postcss.config.mjs` (not `tailwindcss`). No `autoprefixer` needed.
 - shadcn init overwrites `globals.css` — restore to `@import "tailwindcss"` + `@theme` block. Do NOT import `tw-animate-css` or `shadcn/tailwind.css` (Tailwind 4 incompatible), even though `tw-animate-css` is in `package.json` (pulled by shadcn init).
 - `package.json` contains `shadcn` CLI. To add shadcn components: `npx shadcn add <name>`.
+- `next-env.d.ts` is auto-generated — it flips between `.next/dev/types/routes.d.ts` (after `dev`) and `.next/types/routes.d.ts` (after `build`). Ignore the churn; both are correct.
 
 ## Key conventions
 
