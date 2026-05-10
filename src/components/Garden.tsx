@@ -378,23 +378,31 @@ function GardenCell({
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touched = useRef(false);
 
-  const handleTouchStart = useCallback(() => {
-    touched.current = true;
-    longPressTimer.current = setTimeout(() => {
-      if (touched.current && plant) {
-        onLongPress();
-        touched.current = false;
-      }
-    }, 500);
-  }, [plant, onLongPress]);
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      e.preventDefault();
+      touched.current = true;
+      longPressTimer.current = setTimeout(() => {
+        if (touched.current && plant) {
+          onLongPress();
+          touched.current = false;
+        }
+      }, 500);
+    },
+    [plant, onLongPress],
+  );
 
-  const handleTouchEnd = useCallback(() => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-    if (touched.current) {
-      onSelect();
-    }
-    touched.current = false;
-  }, [onSelect]);
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      e.preventDefault();
+      if (longPressTimer.current) clearTimeout(longPressTimer.current);
+      if (touched.current) {
+        onSelect();
+      }
+      touched.current = false;
+    },
+    [onSelect],
+  );
 
   return (
     <div
@@ -414,7 +422,7 @@ function GardenCell({
             ? "bg-[#222b36] hover:bg-[#273440]"
             : "cursor-pointer bg-[#222b36]/70 hover:bg-[#2a3a2a]"
       }`}
-      style={{ minHeight: "6rem", height: "6rem" }}
+      style={{ minHeight: "6rem", height: "6rem", touchAction: "manipulation" }}
       aria-label={plant ? `Растение` : "Пустая клетка — купить растение"}
       role="button"
       tabIndex={-1}
