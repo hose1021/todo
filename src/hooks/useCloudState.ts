@@ -2,11 +2,18 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { GameState, Habit, Plant, MAX_HABITS, MAX_PLANTS, XP_PER_COMPLETION } from "@/lib/types";
-import { saveGame, loadGame } from "@/lib/storage";
 import { addXP, getPlantGrowth } from "@/lib/gameLogic";
 import { getPlantType, GROWTH_LEVELS } from "@/lib/plants";
 import { playPlantSound, playCompleteSound, playDeleteSound, playLevelUpSound, setMuted } from "@/lib/sound";
 import { ACHIEVEMENTS, evaluateAchievements, initAchievementStates } from "@/lib/achievements";
+import {
+  fetchGameState,
+  syncUserStats,
+  saveHabits,
+  savePlantAtSlot,
+  saveAchievements,
+  updateUsername,
+} from "@/lib/supabase";
 
 const MUTE_KEY = "habbittodo_mute";
 
@@ -32,22 +39,6 @@ const initialState: GameState = {
   achievements: initAchievementStates(),
 };
 
-function migratePlant(p: Record<string, unknown>): Plant {
-  const variant = typeof p.variant === "string" ? p.variant : undefined;
-  const type = typeof p.type === "string" ? p.type
-    : variant && (variant === "tree_1" || variant === "tree_2") ? "grass"
-    : "grass";
-  const upgrades = typeof p.upgrades === "number" ? p.upgrades : 0;
-  const growthLevel = typeof p.growthLevel === "number" ? p.growthLevel
-    : Math.max(1, Math.min(3, upgrades + 1));
-  return {
-    id: p.id as string,
-    type,
-    plantedAt: p.plantedAt as number || Date.now(),
-    growthLevel,
-  };
-}
-
 function findEmptySlot(plants: (Plant | null)[]): number {
   for (let i = 0; i < plants.length; i++) {
     if (plants[i] === null) return i;
@@ -55,90 +46,12 @@ function findEmptySlot(plants: (Plant | null)[]): number {
   return -1;
 }
 
-export function migrateIfNeeded(state: GameState): GameState {
-  const raw = state as unknown as Record<string, unknown>;
-  let result = { ...state };
-
-  if (Array.isArray(raw.inventory)) {
-    const inventory = (raw.inventory as Record<string, unknown>[]).map(migratePlant);
-    const plants = state.plants.map((p) => p ? migratePlant(p as unknown as Record<string, unknown>) : null);
-    result = {
-      ...state,
-      crystals: state.crystals ?? 0,
-      plants,
-      streak: typeof raw.streak === "number" ? (raw.streak as number) : 0,
-      lastCompletionDate: typeof raw.lastCompletionDate === "string" ? (raw.lastCompletionDate as string) : "",
-      lastResetDate: typeof raw.lastResetDate === "string" ? (raw.lastResetDate as string) : getToday(),
-    };
-    for (const invPlant of inventory) {
-      const slot = findEmptySlot(result.plants);
-      if (slot >= 0) {
-        const plantsCopy = [...result.plants];
-        plantsCopy[slot] = { ...invPlant, plantedAt: Date.now(), growthLevel: 1 };
-        result.plants = plantsCopy;
-      }
-    }
-  } else {
-    const oldHabits = state.habits as unknown as (Habit & { plantVariant?: number; color?: string })[];
-    const hasOldFormat = oldHabits.some((h) => h !== null && typeof h === "object" && (h as Habit & { plantVariant?: number }).plantVariant !== undefined);
-
-    if (hasOldFormat) {
-      const newHabits: Habit[] = [];
-      const newPlants: (Plant | null)[] = Array(MAX_PLANTS).fill(null);
-
-      oldHabits.forEach((h: Habit & { plantVariant?: number; color?: string }, i: number) => {
-        if (h !== null && typeof h === "object") {
-          newHabits.push({
-            id: h.id,
-            name: h.name,
-            completions: h.completions ?? 0,
-            createdAt: h.createdAt ?? Date.now(),
-            isDaily: false,
-          });
-          if (h.plantVariant !== undefined && i < MAX_PLANTS) {
-            newPlants[i] = {
-              id: h.id,
-              type: "grass",
-              plantedAt: Date.now() - (h.completions ?? 0) * 3600000,
-              growthLevel: Math.max(1, Math.min(3, (h.completions ?? 0))),
-            };
-          }
-        }
-      });
-
-      result = {
-        ...state,
-        crystals: state.crystals ?? 0,
-        habits: newHabits,
-        plants: newPlants,
-        streak: 0,
-        lastCompletionDate: "",
-        lastResetDate: getToday(),
-      };
-    } else {
-      result.plants = state.plants.map((p) => p ? migratePlant(p as unknown as Record<string, unknown>) : null);
-    }
-  }
-
-  result.habits = result.habits.map((h) => ({
-    ...h,
-    isDaily: h.isDaily ?? false,
-  }));
-
-  if (!result.achievements || !Array.isArray(result.achievements) || result.achievements.length === 0) {
-    result.achievements = initAchievementStates();
-  }
-
-  delete (result as unknown as Record<string, unknown>).inventory;
-
-  return result;
-}
-
-export function useGameState() {
+export function useCloudState(uid: string) {
   const [state, setState] = useState<GameState>(initialState);
   const [loaded, setLoaded] = useState(false);
   const [levelUp, setLevelUp] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [fetchVersion, setFetchVersion] = useState(0);
 
   useEffect(() => {
     const savedMute = localStorage.getItem(MUTE_KEY);
@@ -158,34 +71,48 @@ export function useGameState() {
   }, []);
 
   useEffect(() => {
-    const saved = loadGame();
-    if (saved) {
-      const migrated = migrateIfNeeded(saved);
-      setState(evaluateAchievements(migrated));
-    }
-    setLoaded(true);
-  }, []);
+    if (!uid) return;
+    fetchGameState(uid).then((saved) => {
+      if (saved) {
+        setState(evaluateAchievements(saved));
+      }
+      setLoaded(true);
+    }).catch(() => {
+      setLoaded(true);
+    });
+  }, [uid, fetchVersion]);
 
-  useEffect(() => {
-    if (loaded) saveGame(state);
-  }, [state, loaded]);
+  const refreshState = useCallback(() => {
+    setLoaded(false);
+    setFetchVersion((v) => v + 1);
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setState((s) => {
         const today = getToday();
         if (s.lastResetDate === today) return { ...s };
-        return {
+        const newState = {
           ...s,
           lastResetDate: today,
           habits: s.habits.map((h) =>
             h.isDaily ? { ...h, completions: 0 } : h
           ),
         };
+        saveHabits(uid, newState.habits).catch(() => {});
+        syncUserStats(uid, {
+          xp: newState.xp,
+          level: newState.level,
+          crystals: newState.crystals,
+          streak: newState.streak,
+          lastCompletionDate: newState.lastCompletionDate,
+          lastResetDate: newState.lastResetDate,
+        }).catch(() => {});
+        return newState;
       });
     }, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [uid]);
 
   const addHabit = useCallback((name: string) => {
     if (state.habits.length >= MAX_HABITS) return false;
@@ -196,9 +123,12 @@ export function useGameState() {
       createdAt: Date.now(),
       isDaily: false,
     };
-    setState((s) => evaluateAchievements({ ...s, habits: [...s.habits, habit] }));
+    const newState = evaluateAchievements({ ...state, habits: [...state.habits, habit] });
+    setState(newState);
+    saveHabits(uid, newState.habits).catch(() => {});
+    saveAchievements(uid, newState.achievements).catch(() => {});
     return true;
-  }, [state.habits.length]);
+  }, [state, uid]);
 
   const completeHabit = useCallback((id: string) => {
     setState((s) => {
@@ -225,38 +155,56 @@ export function useGameState() {
         playCompleteSound();
         try { navigator.vibrate?.(10); } catch { /* not supported */ }
       }
-      return evaluateAchievements({ ...s, habits, xp: updated.xp, level: updated.level, streak, lastCompletionDate });
+      const newState = evaluateAchievements({ ...s, habits, xp: updated.xp, level: updated.level, streak, lastCompletionDate });
+      saveHabits(uid, newState.habits).catch(() => {});
+      syncUserStats(uid, {
+        xp: newState.xp,
+        level: newState.level,
+        crystals: newState.crystals,
+        streak: newState.streak,
+        lastCompletionDate: newState.lastCompletionDate,
+        lastResetDate: newState.lastResetDate,
+      }).catch(() => {});
+      saveAchievements(uid, newState.achievements).catch(() => {});
+      return newState;
     });
-  }, []);
+  }, [uid]);
 
   const renameHabit = useCallback((id: string, newName: string) => {
     const trimmed = newName.trim();
     if (!trimmed || trimmed.length > 40) return false;
-    setState((s) => ({
-      ...s,
-      habits: s.habits.map((h) =>
+    setState((s) => {
+      const habits = s.habits.map((h) =>
         h.id === id ? { ...h, name: trimmed } : h
-      ),
-    }));
+      );
+      saveHabits(uid, habits).catch(() => {});
+      return { ...s, habits };
+    });
     return true;
-  }, []);
+  }, [uid]);
 
   const toggleDailyHabit = useCallback((id: string) => {
-    setState((s) => ({
-      ...s,
-      habits: s.habits.map((h) =>
+    setState((s) => {
+      const habits = s.habits.map((h) =>
         h.id === id ? { ...h, isDaily: !h.isDaily } : h
-      ),
-    }));
-  }, []);
+      );
+      saveHabits(uid, habits).catch(() => {});
+      return { ...s, habits };
+    });
+  }, [uid]);
 
   const deleteHabit = useCallback((id: string) => {
-    setState((s) => evaluateAchievements({
-      ...s,
-      habits: s.habits.filter((h) => h.id !== id),
-    }));
-    playDeleteSound();
-  }, []);
+    setState((s) => {
+      const newState = evaluateAchievements({
+        ...s,
+        habits: s.habits.filter((h) => h.id !== id),
+      });
+      saveHabits(uid, newState.habits).catch(() => {});
+      saveAchievements(uid, newState.achievements).catch(() => {});
+      playDeleteSound();
+      return newState;
+    });
+  }, [uid]);
 
   const plantDirectly = useCallback((type: string, slotIndex: number) => {
     if (slotIndex < 0 || slotIndex >= MAX_PLANTS) return false;
@@ -276,10 +224,21 @@ export function useGameState() {
       plants[slotIndex] = plant;
       playPlantSound();
       succeeded = true;
-      return evaluateAchievements({ ...s, plants, crystals: s.crystals - def.cost });
+      const newState = evaluateAchievements({ ...s, plants, crystals: s.crystals - def.cost });
+      savePlantAtSlot(uid, slotIndex, plant).catch(() => {});
+      syncUserStats(uid, {
+        xp: newState.xp,
+        level: newState.level,
+        crystals: newState.crystals,
+        streak: newState.streak,
+        lastCompletionDate: newState.lastCompletionDate,
+        lastResetDate: newState.lastResetDate,
+      }).catch(() => {});
+      saveAchievements(uid, newState.achievements).catch(() => {});
+      return newState;
     });
     return succeeded;
-  }, []);
+  }, [uid]);
 
   const upgradePlant = useCallback((slotIndex: number) => {
     if (slotIndex < 0 || slotIndex >= MAX_PLANTS) return false;
@@ -301,13 +260,25 @@ export function useGameState() {
 
       if (s.crystals < cost) return s;
 
+      const upgradedPlant = { ...plant, growthLevel: nextLevel, plantedAt: Date.now() };
       const plants = [...s.plants];
-      plants[slotIndex] = { ...plant, growthLevel: nextLevel, plantedAt: Date.now() };
+      plants[slotIndex] = upgradedPlant;
       succeeded = true;
-      return evaluateAchievements({ ...s, plants, crystals: s.crystals - cost });
+      const newState = evaluateAchievements({ ...s, plants, crystals: s.crystals - cost });
+      savePlantAtSlot(uid, slotIndex, upgradedPlant).catch(() => {});
+      syncUserStats(uid, {
+        xp: newState.xp,
+        level: newState.level,
+        crystals: newState.crystals,
+        streak: newState.streak,
+        lastCompletionDate: newState.lastCompletionDate,
+        lastResetDate: newState.lastResetDate,
+      }).catch(() => {});
+      saveAchievements(uid, newState.achievements).catch(() => {});
+      return newState;
     });
     return succeeded;
-  }, []);
+  }, [uid]);
 
   const removePlant = useCallback((slotIndex: number) => {
     if (slotIndex < 0 || slotIndex >= MAX_PLANTS) return false;
@@ -324,10 +295,21 @@ export function useGameState() {
       const plants = [...s.plants];
       plants[slotIndex] = null;
       playDeleteSound();
-      return evaluateAchievements({ ...s, plants, crystals: s.crystals + refund });
+      const newState = evaluateAchievements({ ...s, plants, crystals: s.crystals + refund });
+      savePlantAtSlot(uid, slotIndex, null).catch(() => {});
+      syncUserStats(uid, {
+        xp: newState.xp,
+        level: newState.level,
+        crystals: newState.crystals,
+        streak: newState.streak,
+        lastCompletionDate: newState.lastCompletionDate,
+        lastResetDate: newState.lastResetDate,
+      }).catch(() => {});
+      saveAchievements(uid, newState.achievements).catch(() => {});
+      return newState;
     });
     return true;
-  }, []);
+  }, [uid]);
 
   const claimAchievement = useCallback((id: string) => {
     setState((s) => {
@@ -344,6 +326,7 @@ export function useGameState() {
         ),
       };
 
+      let plantedSlot = -1;
       if (def.rewardFlower && getPlantType(id)) {
         const slot = findEmptySlot(s.plants);
         if (slot >= 0) {
@@ -357,12 +340,34 @@ export function useGameState() {
           plants[slot] = plant;
           playPlantSound();
           newState = { ...newState, plants };
+          plantedSlot = slot;
         }
+      }
+
+      syncUserStats(uid, {
+        xp: newState.xp,
+        level: newState.level,
+        crystals: newState.crystals,
+        streak: newState.streak,
+        lastCompletionDate: newState.lastCompletionDate,
+        lastResetDate: newState.lastResetDate,
+      }).catch(() => {});
+      saveAchievements(uid, newState.achievements).catch(() => {});
+      if (plantedSlot >= 0) {
+        const plant = newState.plants[plantedSlot];
+        if (plant) savePlantAtSlot(uid, plantedSlot, plant).catch(() => {});
       }
 
       return newState;
     });
-  }, []);
+  }, [uid]);
+
+  const setUsername = useCallback((username: string) => {
+    setState((s) => {
+      updateUsername(uid, username).catch(() => {});
+      return s;
+    });
+  }, [uid]);
 
   return {
     state,
@@ -376,6 +381,7 @@ export function useGameState() {
     loaded,
     levelUp,
     isMuted,
+    refreshState,
     addHabit,
     completeHabit,
     deleteHabit,
@@ -385,6 +391,7 @@ export function useGameState() {
     upgradePlant,
     removePlant,
     claimAchievement,
+    setUsername,
     toggleMute,
   };
 }

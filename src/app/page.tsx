@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useGameState } from "@/hooks/useGameState";
+import { useAuth } from "@/hooks/useAuth";
+import { useCloudState } from "@/hooks/useCloudState";
 import Garden from "@/components/Garden";
 import HabitList from "@/components/HabitList";
 import AddHabitForm from "@/components/AddHabitForm";
@@ -10,10 +11,28 @@ import XPBar from "@/components/XPBar";
 import Confetti from "@/components/Confetti";
 import HelpModal, { useHelpModal } from "@/components/HelpModal";
 import AchievementPanel from "@/components/AchievementPanel";
+import LoginScreen from "@/components/LoginScreen";
+import LeaderboardPanel from "@/components/LeaderboardPanel";
+import UserGarden from "@/components/UserGarden";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 import { MAX_HABITS } from "@/lib/types";
+import { loadGame, clearGame } from "@/lib/storage";
+import { migrateIfNeeded } from "@/hooks/useGameState";
+import { buildSession } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
+import {
+  fetchUserByLoginKey,
+  createUser,
+  syncUserStats,
+  saveHabits,
+  saveAchievements,
+  savePlantAtSlot,
+} from "@/lib/supabase";
 
 export default function Home() {
+  const { status, uid, login, logout } = useAuth();
+  const cloudState = useCloudState(uid || "");
+
   const {
     state,
     xp,
@@ -26,6 +45,7 @@ export default function Home() {
     loaded,
     levelUp,
     isMuted,
+    refreshState,
     addHabit,
     completeHabit,
     deleteHabit,
@@ -35,8 +55,9 @@ export default function Home() {
     upgradePlant,
     removePlant,
     claimAchievement,
+    setUsername,
     toggleMute,
-  } = useGameState();
+  } = cloudState;
 
   const { showHelp, ready, open: openHelp, close: closeHelp } = useHelpModal();
 
@@ -54,10 +75,52 @@ export default function Home() {
   const [showAchievements, setShowAchievements] = useState(false);
   const [shopSheetOpen, setShopSheetOpen] = useState(false);
   const [shopSheetSlot, setShopSheetSlot] = useState(0);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [viewUserUid, setViewUserUid] = useState<string | null>(null);
 
   const claimableCount = achievements.filter(
     (a) => a.status === "unlocked",
   ).length;
+
+  const hasLocalData = typeof window !== "undefined" && loadGame() !== null;
+
+  const handleMigrate = useCallback(async (loginKey: string) => {
+    const localState = loadGame();
+    if (!localState) return;
+    const migrated = migrateIfNeeded(localState);
+
+    try {
+      const existing = await fetchUserByLoginKey(loginKey);
+      let uid: string;
+      if (existing) {
+        uid = existing.uid;
+      } else {
+        uid = crypto.randomUUID();
+        const session = await buildSession(uid);
+        await supabase.auth.setSession(session);
+        await createUser(loginKey, uid);
+      }
+      await syncUserStats(uid, {
+        xp: migrated.xp,
+        level: migrated.level,
+        crystals: migrated.crystals,
+        streak: migrated.streak,
+        lastCompletionDate: migrated.lastCompletionDate,
+        lastResetDate: migrated.lastResetDate,
+      });
+      await saveHabits(uid, migrated.habits);
+      for (let i = 0; i < migrated.plants.length; i++) {
+        if (migrated.plants[i]) {
+          await savePlantAtSlot(uid, i, migrated.plants[i]);
+        }
+      }
+      await saveAchievements(uid, migrated.achievements);
+      clearGame();
+      refreshState();
+    } catch {
+      // silently fail
+    }
+  }, [refreshState]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -76,11 +139,33 @@ export default function Home() {
         setShowAddHabit(false);
         setShowAchievements(false);
         setShopSheetOpen(false);
+        setShowLeaderboard(false);
+        setViewUserUid(null);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedHabitId, completeHabit]);
+
+  if (status === "checking") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#202833]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#5e7284] border-t-transparent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "loggedOut") {
+    return (
+      <LoginScreen
+        onLogin={login}
+        hasLocalData={hasLocalData}
+        onMigrate={handleMigrate}
+      />
+    );
+  }
 
   if (!loaded || !ready) {
     return (
@@ -130,6 +215,23 @@ export default function Home() {
         </div>
       )}
 
+      {showLeaderboard && (
+        <LeaderboardPanel
+          onClose={() => setShowLeaderboard(false)}
+          onViewUser={(targetUid) => {
+            setShowLeaderboard(false);
+            setViewUserUid(targetUid);
+          }}
+        />
+      )}
+
+      {viewUserUid && (
+        <UserGarden
+          targetUid={viewUserUid}
+          onClose={() => setViewUserUid(null)}
+        />
+      )}
+
       <header className="sticky top-0 z-40 border-b border-[#33404d] bg-[#202833]/95 backdrop-blur-xl">
         <div className="mx-auto flex max-w-4xl items-center gap-2 px-2 py-2 sm:gap-3 sm:px-4 sm:py-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#3a4653] bg-[#242f3a] text-xl shadow-lg shadow-black/20">
@@ -168,6 +270,20 @@ export default function Home() {
               title={isMuted ? "Включить звук" : "Выключить звук"}
             >
               {isMuted ? "🔇" : "🔊"}
+            </button>
+            <button
+              onClick={() => setShowLeaderboard(true)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#3a4653] bg-[#242f3a]/90 text-base text-[#d5a63d] hover:bg-[#2d3a47] transition-colors shadow-lg shadow-black/20"
+              title="Таблица лидеров"
+            >
+              🏆
+            </button>
+            <button
+              onClick={logout}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#543a3a] bg-[#3a2a2a]/50 text-sm text-[#887777] hover:bg-[#3a2a2a] hover:text-[#ff8d8d] transition-colors shadow-lg shadow-black/20"
+              title="Выйти"
+            >
+              🚪
             </button>
           </div>
         </div>

@@ -67,6 +67,15 @@ export interface GameState {
   achievements: AchievementState[];
 }
 
+export interface UserProfile {
+  uid: string;
+  username: string;
+  xp: number;
+  level: number;
+  streak: number;
+  plantCount: number;
+}
+
 export const MAX_HABITS = 50;
 export const MAX_PLANTS = 36;
 export const XP_PER_COMPLETION = 10;

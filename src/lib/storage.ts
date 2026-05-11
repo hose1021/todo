@@ -1,6 +1,6 @@
 import { GameState } from "./types";
 
-const STORAGE_KEY = "habbittodo_save";
+export const STORAGE_KEY = "habbittodo_save";
 
 export function saveGame(state: GameState): void {
   if (typeof window === "undefined") return;
