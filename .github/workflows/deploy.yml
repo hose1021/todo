@@ -23,6 +23,9 @@ jobs:
       - run: bun run build
         env:
           NEXT_PUBLIC_BASE_PATH: /todo
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_JWT_SECRET: ${{ secrets.NEXT_PUBLIC_SUPABASE_JWT_SECRET }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./out
