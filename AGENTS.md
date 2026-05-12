@@ -3,8 +3,8 @@
 ## Project overview
 
 Next.js 16 (Turbopack default) + React 19 + TypeScript 6 + Tailwind CSS 4. Static export (`output: "export"`) — no server at runtime.
-Single client-side page with auth gate. Supabase for cloud persistence, auth, and leaderboard (4 tables, RLS). Russian-language UI. Inter font via `next/font/google`.
-shadcn/ui (`Sheet`, `Popover`, `Button`, `Dialog`) via `@base-ui/react`. `components.json` is the shadcn config.
+Single client-side page with auth gate. Supabase for cloud persistence, auth, and leaderboard (4 tables, RLS). Russian-language UI. Inter + Geist fonts via `next/font/google`.
+shadcn/ui v4 (`Sheet`, `Popover`, `Button`, `Dialog`) via `@base-ui/react`. Full CSS variable theme with class-based dark mode (`<html className="dark">`). Semantic color tokens in use (`bg-primary`, `text-foreground`, etc.).
 Package manager: `bun` (`bun.lock` committed). `npm run <script>` also works.
 
 ## Commands
@@ -29,7 +29,7 @@ All are `NEXT_PUBLIC_*` (bundled into the static export at build time). `.env` a
 
 Database schema: `sql/schema.sql` — run once in Supabase SQL Editor to create tables, indexes, RLS policies, and the `auth_user` RPC.
 
-CI deploy (`.github/workflows/deploy.yml`): these vars must be set as **GitHub Secrets** in the repo. Without them, the app builds but Supabase calls fail at runtime.
+CI deploy (`.github/workflows/deploy.yml`): these vars must be set as **GitHub Secrets**. Without them, the app builds but Supabase calls fail at runtime. `NEXT_PUBLIC_BASE_PATH: /todo` is hardcoded in the workflow.
 
 ### Development mode
 
@@ -41,16 +41,14 @@ When `NEXT_PUBLIC_ENV=development` is set in `.env.local`:
 - `setUsername` and `refreshState` are no-ops
 - Data is stored under `habbittodo_save` in localStorage
 
-This completely isolates local development from the production Supabase database.
-
 ## Architecture
 
 ```
 src/
 ├── app/
-│   ├── layout.tsx       # ONLY server component (no "use client"), Inter font + Russian metadata
+│   ├── layout.tsx       # ONLY server component, Inter + Geist fonts, <html className="dark">
 │   ├── page.tsx          # single page, wires everything, bottom nav on mobile
-│   └── globals.css       # @import 'tailwindcss' + @theme (custom keyframes) + @layer base (dark theme, scrollbar, body)
+│   └── globals.css       # @import tailwindcss + tw-animate-css + shadcn/tailwind.css, @theme inline (radius/color vars), @theme (custom keyframes), @layer base, :root + .dark CSS vars
 ├── components/
 │   ├── ui/               # shadcn wrappers: button.tsx, popover.tsx, sheet.tsx, dialog.tsx
 │   ├── Garden.tsx        # 6×6 grid (MAX_PLANTS=36), long-press select, Popover (desktop) / Sheet (mobile) detail
@@ -69,7 +67,7 @@ src/
 │   ├── useAppState.ts     # unified hook: picks useGameState (dev) or useCloudState (prod) based on NEXT_PUBLIC_ENV
 │   ├── useCloudState.ts  # primary state hook (Supabase-backed), same API as useGameState
 │   ├── useAuth.ts        # secret key + name auth, JWT session management
-│   └── useGameState.ts    # kept for migrateIfNeeded() — converts old local saves to current format
+│   └── useGameState.ts    # development-only state + migrateIfNeeded() for legacy save migration
 ├── lib/
 │   ├── types.ts           # Habit, Plant, GameState, AchievementDef, constants (MAX_HABITS=50, MAX_PLANTS=36, XP_PER_COMPLETION=10)
 │   ├── plants.ts          # 16 PLANT_TYPES, RARITY_LEVELS (1–5), GROWTH_LEVELS (1–3), SPROUT_EMOJI="🌱"
@@ -88,22 +86,23 @@ sql/
 
 ## Build/deploy quirks
 
-- `next.config.mjs`: `basePath` from `NEXT_PUBLIC_BASE_PATH` env (empty by default). Static export to `out/`.
+- `next.config.mjs`: `output: "export"`, `basePath` from `NEXT_PUBLIC_BASE_PATH` env, `images: { unoptimized: true }` (required for static export). Static export to `out/`.
 - `turbopack.root` should be set to `import.meta.dirname` in `next.config.mjs` to avoid lockfile detection warnings when `package-lock.json` exists in a parent directory.
-- `vitest.config.ts`: aliases `@` → `./src` matching tsconfig paths.
+- `vitest.config.ts`: aliases `@` → `./src` matching tsconfig paths. `environment: "node"`.
 - Tailwind 4 uses `@tailwindcss/postcss` in `postcss.config.mjs` (not `tailwindcss`). No `autoprefixer` needed.
-- shadcn init overwrites `globals.css` — restore to `@import "tailwindcss"` + `@import "tw-animate-css"` + `@theme inline` (radius vars) + `@theme` (custom keyframes) + `@layer base`. `tw-animate-css` v1.x is Tailwind 4 compatible.
-- `package.json` contains `shadcn` CLI. To add shadcn components: `npx shadcn add <name>`.
+- `globals.css` requires three imports: `@import "tailwindcss"`, `@import "tw-animate-css"` (v1.x, Tailwind 4 compatible), `@import "shadcn/tailwind.css"` (shadcn v4 base styles). If shadcn init overwrites `globals.css`, restore these plus `@theme inline` (radius/color vars), `@theme` (custom keyframes), `:root` / `.dark` CSS variables, and `@layer base` (dark theme, scrollbar, body).
+- To add shadcn components: `npx shadcn add <name>`. Project uses `@base-ui/react` (not Radix).
 - `next-env.d.ts` is auto-generated — it flips between `.next/dev/types/routes.d.ts` (after `dev`) and `.next/types/routes.d.ts` (after `build`). Ignore the churn; both are correct.
 
 ## Key conventions
 
 - `@/*` → `./src/*` (tsconfig paths + vitest). Import order: `@/lib/*`, `@/hooks/*`, `@/components/*`.
-- `layout.tsx` is the ONLY server component. Everything else is `"use client"`.
-- `useAppState` is the single entry point for state. It delegates to `useCloudState` (Supabase) in production and `useGameState` (localStorage) in development. `useGameState` is also used for `migrateIfNeeded()` (local→cloud migration).
+- `layout.tsx` is the ONLY server component (no `"use client"`). Sets `<html className="dark">` for class-based dark mode. Everything else is `"use client"`.
+- `useAppState` is the single entry point for state. It delegates to `useCloudState` (Supabase) in production and `useGameState` (localStorage) in development.
 - `next/image` is NOT used — all plants are emoji strings.
 - `GardenCell` is a `<div role="button" tabIndex={-1}>` (NOT `<button>`) — avoids nesting inside `PopoverTrigger`'s `<button>`.
 - Supabase client is **lazy-initialized** via `getSupabase()` — NOT a module-level `createClient()` call. This prevents SSR/prerender crashes in CI builds where env vars are missing. All DB calls go through `getSupabase()`, never a bare `supabase` export.
+- shadcn components use **semantic color tokens** (`bg-primary`, `text-foreground`, `bg-muted`, `text-muted-foreground`, `border-border`, etc.). Do NOT use raw color values in new shadcn component code. CSS variables defined in `globals.css` under `:root` (light) and `.dark` (dark mode).
 
 ## Auth
 
@@ -142,20 +141,13 @@ Custom JWT-based auth (no Supabase Auth service), two-field login: **secret key 
 - Old inventory array → auto-plants into first empty garden slots
 - Adds missing `achievements` array, removes `inventory` key
 
-## Game mechanics (high-level)
+## Game mechanics
 
 - **XP**: +10 per habit completion. Level-up at `level × 100` XP. Crystals are NOT earned from completions.
 - **Daily habits** (↻): completions reset to 0 each day by 30s ticker.
-- **Streak** 🔥: consecutive days → streak++. Missed day → reset to 1.
+- **Streak**: consecutive days → streak++. Missed day → reset to 1.
 - **Growth**: L1 instant (scale-75, saturate 50%). L2 costs `cost×1.4`, grows `growHours×2`. L3 costs `cost×2`, grows `growHours×4`. Shows 🌱 + progress bar during growth.
 - **Plant unlocks**: each type locked behind a specific achievement. Only `grass` is always available.
 - **Crystals**: earned only from achievement claims. Spent on buying plants and upgrading. Refunded on deletion.
 - **Flower rewards**: certain achievements auto-plant into first empty slot (uses achievement `id` as plant `type`).
 - **Re-render**: `setInterval` every 30s for growth progress and daily habit resets.
-
-## ESLint
-
-- ESLint 10 flat config (`eslint.config.mjs`). `next lint` was removed in Next.js 16 — run `eslint .` directly.
-- Config imports `@next/eslint-plugin-next` and uses `nextPlugin.configs["core-web-vitals"]` (flat config object).
-- `eslint-config-next` is no longer needed — the plugin is a direct dev dependency.
-- Ignores: `.next/` and `out/` are excluded in the config.
