@@ -1,4 +1,4 @@
-import { AchievementDef, GameState } from "./types";
+import { AchievementDef, GameState, MAX_GROWTH_LEVEL } from "./types";
 
 function maxCompletions(state: GameState): number {
   if (state.habits.length === 0) return 0;
@@ -42,7 +42,7 @@ function uniqueTypesPlanted(state: GameState): number {
 function plantsAtLevel3(state: GameState): number {
   let count = 0;
   for (const plant of state.plants) {
-    if (plant && plant.growthLevel >= 3) count++;
+    if (plant && plant.growthLevel >= MAX_GROWTH_LEVEL) count++;
   }
   return count;
 }

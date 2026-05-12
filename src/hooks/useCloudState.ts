@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { GameState, Habit, Plant, MAX_HABITS, MAX_PLANTS, XP_PER_COMPLETION, MS_PER_DAY, TICK_INTERVAL_MS } from "@/lib/types";
+import { GameState, Habit, Plant, MAX_HABITS, MAX_PLANTS, XP_PER_COMPLETION, MS_PER_DAY, TICK_INTERVAL_MS, MAX_GROWTH_LEVEL } from "@/lib/types";
 import { addXP, getPlantGrowth } from "@/lib/gameLogic";
 import { getPlantType, GROWTH_LEVELS } from "@/lib/plants";
 import { useSound } from "@/lib/sound";
@@ -217,7 +217,7 @@ export function useCloudState(uid: string) {
     setState((s) => {
       const plant = s.plants[slotIndex];
       if (!plant) return s;
-      if (plant.growthLevel >= 3) return s;
+      if (plant.growthLevel >= MAX_GROWTH_LEVEL) return s;
 
       const growth = getPlantGrowth(plant);
       if (growth.isGrowing) return s;

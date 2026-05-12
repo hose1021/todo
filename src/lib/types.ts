@@ -81,6 +81,8 @@ export const MAX_PLANTS = 36;
 export const GRID_COLS = 6;
 export const XP_PER_COMPLETION = 10;
 
+export const MAX_GROWTH_LEVEL = 3;
+
 export const MS_PER_SECOND = 1000;
 export const MS_PER_MINUTE = 60000;
 export const MS_PER_HOUR = 3600000;
