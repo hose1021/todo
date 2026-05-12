@@ -18,11 +18,7 @@ import { ACHIEVEMENTS } from "@/lib/achievements";
 import { MAX_HABITS } from "@/lib/types";
 import { loadGame, clearGame } from "@/lib/storage";
 import { migrateIfNeeded } from "@/hooks/useGameState";
-import { buildSession } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
 import {
-  fetchUserByLoginKey,
-  createUser,
   syncUserStats,
   saveHabits,
   saveAchievements,
@@ -84,22 +80,13 @@ export default function Home() {
 
   const hasLocalData = typeof window !== "undefined" && loadGame() !== null;
 
-  const handleMigrate = useCallback(async (loginKey: string) => {
+  const handleMigrate = useCallback(async (userUid: string) => {
     const localState = loadGame();
     if (!localState) return;
     const migrated = migrateIfNeeded(localState);
 
     try {
-      const existing = await fetchUserByLoginKey(loginKey);
-      let uid: string;
-      if (existing) {
-        uid = existing.uid;
-      } else {
-        uid = crypto.randomUUID();
-        const session = await buildSession(uid);
-        await supabase.auth.setSession(session);
-        await createUser(loginKey, uid);
-      }
+      const uid = userUid;
       await syncUserStats(uid, {
         xp: migrated.xp,
         level: migrated.level,

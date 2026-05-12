@@ -1,10 +1,38 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Habit, Plant, AchievementState, GameState } from "@/lib/types";
+import { initAchievementStates } from "@/lib/achievements";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+let currentJwt: string | null = null;
+
+function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const headers = new Headers(init?.headers);
+  if (currentJwt) {
+    headers.set("Authorization", `Bearer ${currentJwt}`);
+  }
+  return fetch(input, { ...init, headers });
+}
+
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+    detectSessionInUrl: false,
+  },
+  global: {
+    fetch: authFetch,
+  },
+});
+
+export function setCurrentJwt(jwt: string | null) {
+  currentJwt = jwt;
+}
+
+if (typeof window !== "undefined") {
+  localStorage.removeItem("sb-zfyqycjgforbopsvonom-auth-token");
+}
 
 export interface UserRow {
   uid: string;
@@ -91,7 +119,10 @@ export async function fetchUserByLoginKey(
   return data as UserRow | null;
 }
 
-export async function createUser(loginKey: string, uid: string): Promise<UserRow> {
+export async function createUser(
+  loginKey: string,
+  uid: string,
+): Promise<UserRow> {
   const today = new Date();
   const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
@@ -146,7 +177,9 @@ export async function fetchGameState(uid: string): Promise<GameState | null> {
     streak: user.streak,
     lastCompletionDate: user.last_completion_date,
     lastResetDate: user.last_reset_date,
-    achievements: achievementsRows.map(rowToAchievement),
+    achievements: achievementsRows.length > 0
+    ? achievementsRows.map(rowToAchievement)
+    : initAchievementStates(),
   };
 }
 
@@ -175,10 +208,7 @@ export async function syncUserStats(
     .eq("uid", uid);
 }
 
-export async function saveHabits(
-  uid: string,
-  habits: Habit[],
-): Promise<void> {
+export async function saveHabits(uid: string, habits: Habit[]): Promise<void> {
   const rows: HabitRow[] = habits.map((h) => ({
     id: h.id,
     user_uid: uid,
@@ -236,9 +266,7 @@ export async function saveAchievements(
   }
 }
 
-export async function fetchLeaderboard(
-  limit = 100,
-): Promise<UserProfile[]> {
+export async function fetchLeaderboard(limit = 100): Promise<UserProfile[]> {
   const { data: users, error } = await supabase
     .from("users")
     .select("uid, username, xp, level, streak")
@@ -248,7 +276,10 @@ export async function fetchLeaderboard(
 
   if (error || !users) return [];
 
-  const userRows = users as Pick<UserRow, "uid" | "username" | "xp" | "level" | "streak">[];
+  const userRows = users as Pick<
+    UserRow,
+    "uid" | "username" | "xp" | "level" | "streak"
+  >[];
 
   return userRows.map((u) => ({
     uid: u.uid,
@@ -274,7 +305,10 @@ export async function searchUsers(
 
   if (error || !data) return [];
 
-  const rows = data as Pick<UserRow, "uid" | "username" | "xp" | "level" | "streak">[];
+  const rows = data as Pick<
+    UserRow,
+    "uid" | "username" | "xp" | "level" | "streak"
+  >[];
 
   return rows.map((u) => ({
     uid: u.uid,
@@ -286,9 +320,7 @@ export async function searchUsers(
   }));
 }
 
-export async function fetchUserPlants(
-  uid: string,
-): Promise<(Plant | null)[]> {
+export async function fetchUserPlants(uid: string): Promise<(Plant | null)[]> {
   const { data, error } = await supabase
     .from("plants")
     .select("*")

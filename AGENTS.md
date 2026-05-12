@@ -3,7 +3,7 @@
 ## Project overview
 
 Next.js 16 (Turbopack default) + React 19 + TypeScript 6 + Tailwind CSS 4. Static export (`output: "export"`) — no server at runtime.
-Single client-side page, no API routes, no database. Russian-language UI. Inter font via `next/font/google`.
+Single client-side page with auth gate. Supabase for cloud persistence, auth, and leaderboard (4 tables, RLS). Russian-language UI. Inter font via `next/font/google`.
 shadcn/ui (`Sheet`, `Popover`, `Button`) via `@base-ui/react`. `components.json` is the shadcn config.
 Package manager: `bun` (`bun.lock` committed). `npm run <script>` also works.
 
@@ -17,6 +17,16 @@ npm run test:watch    # vitest (watch mode)
 npm run lint          # ESLint (flat config: eslint.config.mjs)
 npx tsc --noEmit      # typecheck (no separate check script)
 ```
+
+## Environment variables
+
+All three are `NEXT_PUBLIC_*` (bundled into the static export at build time). `.env` and `.env.local` are gitignored.
+
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — Supabase publishable key
+- `NEXT_PUBLIC_SUPABASE_JWT_SECRET` — HS256 secret for custom JWT signing (client-side; used for RLS)
+
+Database schema: `sql/schema.sql` — run once in Supabase SQL Editor to create tables, indexes, and RLS policies.
 
 ## Architecture
 
@@ -36,24 +46,34 @@ src/
 │   ├── XPBar.tsx          # level badge + XP progress bar
 │   ├── Confetti.tsx       # particle overlay on level-up (~2.5s)
 │   ├── HelpModal.tsx      # first-visit tutorial (localStorage: "habbittodo_help_seen")
-│   └── AchievementPanel.tsx # 15 achievements grid, progress bars, claim button
+│   ├── AchievementPanel.tsx # 15 achievements grid, progress bars, claim button
+│   ├── LoginScreen.tsx    # login key entry, local data migration prompt
+│   ├── LeaderboardPanel.tsx # leaderboard from Supabase, view other players
+│   └── UserGarden.tsx     # view another player's garden (read-only 6×6 grid)
 ├── hooks/
-│   └── useGameState.ts    # single state owner — habits, plants, XP, crystals, streak, achievements, mute, migrateIfNeeded
+│   ├── useCloudState.ts  # primary state hook (Supabase-backed), same API as useGameState
+│   ├── useAuth.ts        # login key auth, JWT session management
+│   └── useGameState.ts    # kept for migrateIfNeeded() — converts old local saves to current format
 ├── lib/
 │   ├── types.ts           # Habit, Plant, GameState, AchievementDef, constants (MAX_HABITS=50, MAX_PLANTS=36, XP_PER_COMPLETION=10)
 │   ├── plants.ts          # 16 PLANT_TYPES, RARITY_LEVELS (1–5), GROWTH_LEVELS (1–3), SPROUT_EMOJI="🌱"
 │   ├── gameLogic.ts       # getXPForLevel, addXP, getPlantGrowth, getPlantScaleSaturate, formatTimeRemaining
 │   ├── achievements.ts    # 15 ACHIEVEMENTS, evaluateAchievements, initAchievementStates
 │   ├── storage.ts         # localStorage under "habbittodo_save"
+│   ├── supabase.ts        # Supabase client + CRUD: fetchGameState, syncUserStats, saveHabits, savePlantAtSlot, saveAchievements, fetchLeaderboard, updateUsername
+│   ├── auth.ts            # JWT signing (HS256 via Web Crypto), login key localStorage management
 │   ├── sound.ts           # Web Audio API: plant, complete, delete, levelUp
 │   └── utils.ts           # cn() helper (clsx + tailwind-merge)
 tests/
 └── gameLogic.test.ts      # vitest tests
+sql/
+└── schema.sql            # Supabase schema: users, habits, plants, achievements + RLS policies + indexes
 ```
 
 ## Build/deploy quirks
 
 - `next.config.mjs`: `basePath` from `NEXT_PUBLIC_BASE_PATH` env (empty by default). Static export to `out/`.
+- `turbopack.root` should be set to `import.meta.dirname` in `next.config.mjs` to avoid lockfile detection warnings when `package-lock.json` exists in a parent directory.
 - `vitest.config.ts`: aliases `@` → `./src` matching tsconfig paths.
 - Tailwind 4 uses `@tailwindcss/postcss` in `postcss.config.mjs` (not `tailwindcss`). No `autoprefixer` needed.
 - shadcn init overwrites `globals.css` — restore to `@import "tailwindcss"` + `@theme` block. Do NOT import `tw-animate-css` or `shadcn/tailwind.css` (Tailwind 4 incompatible), even though `tw-animate-css` is in `package.json` (pulled by shadcn init).
@@ -64,10 +84,21 @@ tests/
 
 - `@/*` → `./src/*` (tsconfig paths + vitest). Import order: `@/lib/*`, `@/hooks/*`, `@/components/*`.
 - `layout.tsx` is the ONLY server component. Everything else is `"use client"`.
-- `useGameState` is the single state owner. All data flows down as props, callbacks flow up.
-- `useGameState` auto-saves to localStorage on state change (guarded by `loaded` flag).
+- `useCloudState` is the primary state owner for logged-in users — same API as `useGameState` but persists to Supabase. `useGameState` only used for `migrateIfNeeded()` (local→cloud migration).
 - `next/image` is NOT used — all plants are emoji strings.
 - `GardenCell` is a `<div role="button" tabIndex={-1}>` (NOT `<button>`) — avoids nesting inside `PopoverTrigger`'s `<button>`.
+
+## Auth
+
+Custom JWT-based auth (no Supabase Auth service):
+
+1. User enters a **login key** (freeform text password).
+2. Client signs a **JWT** (HS256 via Web Crypto) using `NEXT_PUBLIC_SUPABASE_JWT_SECRET` — the JWT `sub` is a UUID, `role` = `authenticated`.
+3. JWT is passed as `Authorization: Bearer <token>` via a custom `authFetch` wrapper in `supabase.ts`.
+4. Supabase **RLS policies** use `auth.uid()` to enforce per-user row access.
+5. Login key stored in localStorage under `habbittodo_login_key`.
+6. First login **creates** a new user row (`createUser`). Subsequent logins **fetch** existing state (`fetchGameState`).
+7. `page.tsx` gates rendering: `"checking"` → spinner, `"loggedOut"` → `LoginScreen`, `"loggedIn"` → main app.
 
 ## Data model
 

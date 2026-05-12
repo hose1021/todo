@@ -65,11 +65,15 @@ ALTER TABLE public.habits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.plants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.achievements ENABLE ROW LEVEL SECURITY;
 
--- Users: owner can do everything, public can SELECT (leaderboard)
+-- Users: owner can do everything, public can SELECT (leaderboard), anonymous INSERT for signup
 CREATE POLICY users_owner ON public.users
   FOR ALL
   USING (uid = auth.uid())
   WITH CHECK (uid = auth.uid());
+
+CREATE POLICY users_insert ON public.users
+  FOR INSERT
+  WITH CHECK (true);
 
 CREATE POLICY users_public_read ON public.users
   FOR SELECT

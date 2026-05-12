@@ -66,10 +66,23 @@ export function clearLoginKey(): void {
   localStorage.removeItem(LOGIN_KEY);
 }
 
-export async function buildSession(uuid: string): Promise<{
-  access_token: string;
-  refresh_token: string;
-}> {
+export async function buildSession(uuid: string) {
   const jwt = await signJWT(uuid);
-  return { access_token: jwt, refresh_token: jwt };
+  const now = Math.floor(Date.now() / 1000);
+  const expiresAt = now + 60 * 60 * 24 * 365;
+  return {
+    access_token: jwt,
+    token_type: "bearer",
+    expires_in: 60 * 60 * 24 * 365,
+    expires_at: expiresAt,
+    refresh_token: jwt,
+    user: {
+      id: uuid,
+      aud: "authenticated",
+      role: "authenticated",
+      app_metadata: {},
+      user_metadata: {},
+      created_at: new Date().toISOString(),
+    },
+  };
 }

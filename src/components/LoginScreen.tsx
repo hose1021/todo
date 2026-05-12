@@ -3,9 +3,9 @@
 import { useState } from "react";
 
 interface LoginScreenProps {
-  onLogin: (uid: string) => Promise<boolean>;
+  onLogin: (uid: string) => Promise<string | false>;
   hasLocalData: boolean;
-  onMigrate?: (uid: string) => Promise<void>;
+  onMigrate?: (userUid: string) => Promise<void>;
 }
 
 export default function LoginScreen({ onLogin, hasLocalData, onMigrate }: LoginScreenProps) {
@@ -20,9 +20,9 @@ export default function LoginScreen({ onLogin, hasLocalData, onMigrate }: LoginS
     if (!trimmed) return;
     setLoading(true);
     setError("");
-    const ok = await onLogin(trimmed);
+    const userUid = await onLogin(trimmed);
     setLoading(false);
-    if (!ok) {
+    if (!userUid) {
       setError("Не удалось войти. Проверьте настройки подключения.");
     }
   };
@@ -32,14 +32,14 @@ export default function LoginScreen({ onLogin, hasLocalData, onMigrate }: LoginS
     if (!trimmed || !onMigrate) return;
     setMigrating(true);
     setError("");
-    const ok = await onLogin(trimmed);
-    if (!ok) {
+    const userUid = await onLogin(trimmed);
+    if (!userUid) {
       setMigrating(false);
       setError("Не удалось войти. Проверьте настройки подключения.");
       return;
     }
     try {
-      await onMigrate(trimmed);
+      await onMigrate(userUid);
     } catch {
       setError("Не удалось перенести данные.");
     }
