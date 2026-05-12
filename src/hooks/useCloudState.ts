@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { GameState, Habit, Plant, MAX_HABITS, MAX_PLANTS, XP_PER_COMPLETION } from "@/lib/types";
+import { GameState, Habit, Plant, MAX_HABITS, MAX_PLANTS, XP_PER_COMPLETION, MS_PER_DAY, TICK_INTERVAL_MS } from "@/lib/types";
 import { addXP, getPlantGrowth } from "@/lib/gameLogic";
 import { getPlantType, GROWTH_LEVELS } from "@/lib/plants";
 import { playPlantSound, playCompleteSound, playDeleteSound, playLevelUpSound, setMuted } from "@/lib/sound";
@@ -23,7 +23,7 @@ function getToday(): string {
 }
 
 function getYesterday(): string {
-  const d = new Date(Date.now() - 86400000);
+  const d = new Date(Date.now() - MS_PER_DAY);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
@@ -110,7 +110,7 @@ export function useCloudState(uid: string) {
         }).catch(() => {});
         return newState;
       });
-    }, 30000);
+    }, TICK_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [uid]);
 

@@ -1,5 +1,8 @@
+import { MS_PER_SECOND } from "@/lib/types";
+
 const LOGIN_KEY = "habbittodo_login_key";
 const LOGIN_NAME = "habbittodo_login_name";
+const SECONDS_PER_YEAR = 365 * 24 * 60 * 60;
 
 export async function hashLoginKey(key: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -28,13 +31,13 @@ async function signJWT(uuid: string): Promise<string> {
   const encoder = new TextEncoder();
 
   const header = { alg: "HS256", typ: "JWT" };
-  const now = Math.floor(Date.now() / 1000);
+  const now = Math.floor(Date.now() / MS_PER_SECOND);
   const payload = {
     sub: uuid,
     role: "authenticated",
     aud: "authenticated",
     iat: now,
-    exp: now + 60 * 60 * 24 * 365,
+    exp: now + SECONDS_PER_YEAR,
   };
 
   const headerB64 = base64UrlEncode(JSON.stringify(header));
@@ -84,12 +87,12 @@ export function clearLoginKey(): void {
 
 export async function buildSession(uuid: string) {
   const jwt = await signJWT(uuid);
-  const now = Math.floor(Date.now() / 1000);
-  const expiresAt = now + 60 * 60 * 24 * 365;
+  const now = Math.floor(Date.now() / MS_PER_SECOND);
+  const expiresAt = now + SECONDS_PER_YEAR;
   return {
     access_token: jwt,
     token_type: "bearer",
-    expires_in: 60 * 60 * 24 * 365,
+    expires_in: SECONDS_PER_YEAR,
     expires_at: expiresAt,
     refresh_token: jwt,
     user: {

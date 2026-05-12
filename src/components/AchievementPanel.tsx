@@ -67,16 +67,16 @@ export default function AchievementPanel({
               ? Math.min(1, progress.current / progress.target)
               : 0;
 
+  const STATUS_CLASSES: Record<string, string> = {
+    unlocked: "border-[#d5a63d] bg-[#2a3a2a]/80 shadow-[0_0_8px_rgba(213,166,61,0.15)]",
+    claimed: "border-[#304a38] bg-[#1d2b20]/60",
+    locked: "border-[#303b47] bg-[#1d2530]/60",
+  };
+
           return (
             <div
               key={def.id}
-              className={`flex flex-col gap-1.5 rounded-lg border p-2.5 transition-all ${
-                status === "unlocked"
-                  ? "border-[#d5a63d] bg-[#2a3a2a]/80 shadow-[0_0_8px_rgba(213,166,61,0.15)]"
-                  : status === "claimed"
-                    ? "border-[#304a38] bg-[#1d2b20]/60"
-                    : "border-[#303b47] bg-[#1d2530]/60"
-              }`}
+              className={`flex flex-col gap-1.5 rounded-lg border p-2.5 transition-all ${STATUS_CLASSES[status]}`}
             >
               <div className="flex items-center gap-1.5">
                 <span className="text-lg leading-none">{def.emoji}</span>

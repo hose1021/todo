@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { GameState, Habit, Plant, MAX_HABITS, MAX_PLANTS, XP_PER_COMPLETION } from "@/lib/types";
+import { GameState, Habit, Plant, MAX_HABITS, MAX_PLANTS, XP_PER_COMPLETION, MS_PER_DAY, MS_PER_HOUR, TICK_INTERVAL_MS } from "@/lib/types";
 import { saveGame, loadGame } from "@/lib/storage";
 import { addXP, getPlantGrowth } from "@/lib/gameLogic";
 import { getPlantType, GROWTH_LEVELS } from "@/lib/plants";
@@ -16,7 +16,7 @@ function getToday(): string {
 }
 
 function getYesterday(): string {
-  const d = new Date(Date.now() - 86400000);
+  const d = new Date(Date.now() - MS_PER_DAY);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
@@ -32,18 +32,18 @@ const initialState: GameState = {
   achievements: initAchievementStates(),
 };
 
-function migratePlant(p: Record<string, unknown>): Plant {
-  const variant = typeof p.variant === "string" ? p.variant : undefined;
-  const type = typeof p.type === "string" ? p.type
+function migratePlant(rawPlant: Record<string, unknown>): Plant {
+  const variant = typeof rawPlant.variant === "string" ? rawPlant.variant : undefined;
+  const type = typeof rawPlant.type === "string" ? rawPlant.type
     : variant && (variant === "tree_1" || variant === "tree_2") ? "grass"
     : "grass";
-  const upgrades = typeof p.upgrades === "number" ? p.upgrades : 0;
-  const growthLevel = typeof p.growthLevel === "number" ? p.growthLevel
+  const upgrades = typeof rawPlant.upgrades === "number" ? rawPlant.upgrades : 0;
+  const growthLevel = typeof rawPlant.growthLevel === "number" ? rawPlant.growthLevel
     : Math.max(1, Math.min(3, upgrades + 1));
   return {
-    id: p.id as string,
+    id: rawPlant.id as string,
     type,
-    plantedAt: p.plantedAt as number || Date.now(),
+    plantedAt: rawPlant.plantedAt as number || Date.now(),
     growthLevel,
   };
 }
@@ -99,7 +99,7 @@ export function migrateIfNeeded(state: GameState): GameState {
             newPlants[i] = {
               id: h.id,
               type: "grass",
-              plantedAt: Date.now() - (h.completions ?? 0) * 3600000,
+              plantedAt: Date.now() - (h.completions ?? 0) * MS_PER_HOUR,
               growthLevel: Math.max(1, Math.min(3, (h.completions ?? 0))),
             };
           }
@@ -129,9 +129,8 @@ export function migrateIfNeeded(state: GameState): GameState {
     result.achievements = initAchievementStates();
   }
 
-  delete (result as unknown as Record<string, unknown>).inventory;
-
-  return result;
+  const { inventory: _inventory, ...cleanResult } = result as unknown as Record<string, unknown>;
+  return { ...cleanResult } as unknown as GameState;
 }
 
 export function useGameState() {
@@ -183,7 +182,7 @@ export function useGameState() {
           ),
         };
       });
-    }, 30000);
+    }, TICK_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
 

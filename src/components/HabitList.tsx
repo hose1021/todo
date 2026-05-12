@@ -34,7 +34,7 @@ export default function HabitList({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("created");
   const [floats, setFloats] = useState<Record<string, boolean>>({});
-  const editInputRef = useRef<HTMLInputElement>(null!);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (editingId) editInputRef.current?.focus();
@@ -76,7 +76,7 @@ export default function HabitList({
 
   const completeWithFloat = useCallback(
     (id: string) => {
-      setFloats((f) => ({ ...f, [id]: true }));
+      setFloats((float) => ({ ...float, [id]: true }));
       setTimeout(
         () =>
           setFloats((f) => {
@@ -191,11 +191,11 @@ interface HabitRowProps {
   isEditing: boolean;
   isConfirming: boolean;
   editName: string;
-  editInputRef: React.RefObject<HTMLInputElement>;
+  editInputRef: React.RefObject<HTMLInputElement | null>;
   floats: Record<string, boolean>;
   onSelect: () => void;
   onStartEdit: () => void;
-  onEditNameChange: (v: string) => void;
+  onEditNameChange: (value: string) => void;
   onSubmitRename: () => void;
   onCancelEdit: () => void;
   onComplete: () => void;
@@ -250,14 +250,16 @@ function HabitRow({
     }
   };
 
+  const SWIPE_CLASSES: Record<string, string> = {
+    complete: "border-[#4CAF50] bg-[#2a4a3a]",
+    delete: "border-[#c0392b] bg-[#3a2a2a]",
+    default: "border-[#303b47] bg-[#1d2530] hover:border-[#3e4c5b] hover:bg-[#242f3a]",
+  };
+
   const rowClass = `flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 transition-all ${
     isSelected
       ? "scale-[1.01] border-[#55746e] bg-[#2e4442] shadow-md shadow-black/20"
-      : swiped === "complete"
-        ? "border-[#4CAF50] bg-[#2a4a3a]"
-        : swiped === "delete"
-          ? "border-[#c0392b] bg-[#3a2a2a]"
-          : "border-[#303b47] bg-[#1d2530] hover:border-[#3e4c5b] hover:bg-[#242f3a]"
+      : SWIPE_CLASSES[swiped ?? "default"]
   }`;
 
   return (

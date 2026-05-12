@@ -20,6 +20,13 @@ export default function LeaderboardPanel({ onClose, onViewUser }: LeaderboardPan
     }).catch(() => setLoading(false));
   }, []);
 
+  const RANK_CLASSES = [
+    "bg-[#d5a63d] text-[#1f2630]",
+    "bg-[#95a5b8] text-[#1f2630]",
+    "bg-[#b87d4d] text-[#1f2630]",
+  ];
+  const DEFAULT_RANK_CLASS = "bg-[#2d3a47] text-[#657486]";
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
@@ -62,12 +69,7 @@ export default function LeaderboardPanel({ onClose, onViewUser }: LeaderboardPan
                     onClick={() => onViewUser(user.uid)}
                     className="flex w-full items-center gap-3 border-b border-[#272f3a] px-4 py-3 text-left hover:bg-[#252f3a] transition-colors"
                   >
-                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ${
-                      index === 0 ? "bg-[#d5a63d] text-[#1f2630]" :
-                      index === 1 ? "bg-[#95a5b8] text-[#1f2630]" :
-                      index === 2 ? "bg-[#b87d4d] text-[#1f2630]" :
-                      "bg-[#2d3a47] text-[#657486]"
-                    }`}>
+                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ${RANK_CLASSES[index] ?? DEFAULT_RANK_CLASS}`}>
                       {index + 1}
                     </span>
 

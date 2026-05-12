@@ -6,6 +6,7 @@ import type { Plant as PlantType } from "@/lib/types";
 import { getPlantGrowth, getXPForLevel } from "@/lib/gameLogic";
 import { getPlantType } from "@/lib/plants";
 import { fetchUserPlants, getSupabase, type UserRow } from "@/lib/supabase";
+import { TICK_INTERVAL_MS, MAX_PLANTS } from "@/lib/types";
 
 async function fetchUserProfile(uid: string): Promise<UserRow | null> {
   const { data, error } = await getSupabase()
@@ -29,8 +30,8 @@ export default function UserGarden({ targetUid, onClose }: UserGardenProps) {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    const iv = setInterval(() => setTick((t) => t + 1), 30000);
-    return () => clearInterval(iv);
+    const tickerInterval = setInterval(() => setTick((t) => t + 1), TICK_INTERVAL_MS);
+    return () => clearInterval(tickerInterval);
   }, []);
 
   useEffect(() => {
@@ -101,7 +102,7 @@ export default function UserGarden({ targetUid, onClose }: UserGardenProps) {
                 className="grid"
                 style={{ gridTemplateColumns: `repeat(6, minmax(0, 1fr))` }}
               >
-                {Array.from({ length: 36 }).map((_, i) => {
+                {Array.from({ length: MAX_PLANTS }).map((_, i) => {
                   const plant = plants[i] || null;
                   const growth = plant ? getPlantGrowth(plant) : null;
                   const isGrowing = growth?.isGrowing ?? false;
@@ -128,7 +129,7 @@ export default function UserGarden({ targetUid, onClose }: UserGardenProps) {
                 })}
               </div>
               <div className="border-t border-dashed border-[#33404d] px-4 py-2.5 text-center text-[10px] font-semibold text-[#657486]">
-                {count}/36 посажено
+                {count}/{MAX_PLANTS} посажено
               </div>
             </>
           )}

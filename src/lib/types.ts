@@ -78,5 +78,12 @@ export interface UserProfile {
 
 export const MAX_HABITS = 50;
 export const MAX_PLANTS = 36;
+export const GRID_COLS = 6;
 export const XP_PER_COMPLETION = 10;
-export const CRYSTALS_PER_COMPLETION = 10;
+
+export const MS_PER_SECOND = 1000;
+export const MS_PER_MINUTE = 60000;
+export const MS_PER_HOUR = 3600000;
+export const MS_PER_DAY = 86400000;
+export const TICK_INTERVAL_MS = 30000;
+export const LONG_PRESS_MS = 500;

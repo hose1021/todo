@@ -105,8 +105,8 @@ export default function Home() {
       await saveAchievements(uid, migrated.achievements);
       clearGame();
       refreshState();
-    } catch {
-      // silently fail
+    } catch (error) {
+      console.error("Migration failed:", error);
     }
   }, [refreshState]);
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import PlantComp from "./Plant";
-import { Plant as PlantType } from "@/lib/types";
+import { Plant as PlantType, MAX_PLANTS, LONG_PRESS_MS } from "@/lib/types";
 import { getPlantGrowth, formatTimeRemaining } from "@/lib/gameLogic";
 import { getPlantType, GROWTH_LEVELS } from "@/lib/plants";
 import {
@@ -30,7 +30,7 @@ interface GardenProps {
 }
 
 const GRID_COLS = 6;
-const TOTAL_SLOTS = 36;
+const TOTAL_SLOTS = MAX_PLANTS;
 
 export default function Garden({
   plants,
@@ -199,7 +199,8 @@ export default function Garden({
         selectedSlot !== null &&
         plants[selectedSlot] &&
         (() => {
-          const plant = plants[selectedSlot]!;
+          const plant = plants[selectedSlot];
+          if (!plant) return null;
           const growth = getPlantGrowth(plant);
           const def = getPlantType(plant.type);
 
@@ -235,11 +236,13 @@ export default function Garden({
                     crystals={crystals}
                     confirmRemove={confirmRemove}
                     onUpgradeNow={() => {
-                      onUpgrade?.(selectedSlot!);
+                      if (selectedSlot === null) return;
+                      onUpgrade?.(selectedSlot);
                       onSelect(null);
                     }}
                     onRemoveNow={() => {
-                      onRemove?.(selectedSlot!);
+                      if (selectedSlot === null) return;
+                      onRemove?.(selectedSlot);
                       onSelect(null);
                       setConfirmRemove(false);
                     }}
@@ -387,7 +390,7 @@ function GardenCell({
           onLongPress();
           touched.current = false;
         }
-      }, 500);
+      }, LONG_PRESS_MS);
     },
     [plant, onLongPress],
   );
@@ -404,6 +407,12 @@ function GardenCell({
     [onSelect],
   );
 
+  const CELL_BG_CLASS: Record<string, string> = {
+    selected: "bg-[#2e4442]",
+    planted: "bg-[#222b36] hover:bg-[#273440]",
+    empty: "cursor-pointer bg-[#222b36]/70 hover:bg-[#2a3a2a]",
+  };
+
   return (
     <div
       onTouchStart={handleTouchStart}
@@ -416,11 +425,7 @@ function GardenCell({
         }
       }}
       className={`group relative w-full flex flex-col items-center justify-center border-b border-r border-dashed border-[#33404d] transition-colors duration-200 ${
-        isSelected
-          ? "bg-[#2e4442]"
-          : plant
-            ? "bg-[#222b36] hover:bg-[#273440]"
-            : "cursor-pointer bg-[#222b36]/70 hover:bg-[#2a3a2a]"
+        isSelected ? CELL_BG_CLASS.selected : plant ? CELL_BG_CLASS.planted : CELL_BG_CLASS.empty
       }`}
       style={{ minHeight: "6rem", height: "6rem", touchAction: "manipulation" }}
       aria-label={plant ? `Растение` : "Пустая клетка — купить растение"}
