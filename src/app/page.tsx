@@ -189,6 +189,7 @@ export default function Home() {
             <AchievementPanel
               achievements={achievements}
               onClaim={claimAchievement}
+              onClose={() => setShowAchievements(false)}
               getProgressFor={getProgressFor}
             />
           </div>
@@ -354,10 +355,6 @@ export default function Home() {
           </div>
         )}
       </main>
-
-      <footer className="hidden py-6 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5c6b7a] sm:block">
-        Выполняй привычки • получай XP • покупай и выращивай сад
-      </footer>
     </div>
   );
 }
