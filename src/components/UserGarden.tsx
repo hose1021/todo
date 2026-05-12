@@ -5,11 +5,10 @@ import PlantComp from "./Plant";
 import type { Plant as PlantType } from "@/lib/types";
 import { getPlantGrowth, getXPForLevel } from "@/lib/gameLogic";
 import { getPlantType } from "@/lib/plants";
-import { fetchUserPlants, type UserRow } from "@/lib/supabase";
-import { supabase } from "@/lib/supabase";
+import { fetchUserPlants, getSupabase, type UserRow } from "@/lib/supabase";
 
 async function fetchUserProfile(uid: string): Promise<UserRow | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("users")
     .select("*")
     .eq("uid", uid)

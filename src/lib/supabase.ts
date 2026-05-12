@@ -1,9 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Habit, Plant, AchievementState, GameState } from "@/lib/types";
 import { initAchievementStates } from "@/lib/achievements";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
 
 let currentJwt: string | null = null;
 
@@ -15,16 +13,25 @@ function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Respon
   return fetch(input, { ...init, headers });
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-    detectSessionInUrl: false,
-  },
-  global: {
-    fetch: authFetch,
-  },
-});
+let _supabase: SupabaseClient | null = null;
+
+export function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
+    _supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        fetch: authFetch,
+      },
+    });
+  }
+  return _supabase;
+}
 
 export function setCurrentJwt(jwt: string | null) {
   currentJwt = jwt;
@@ -110,7 +117,7 @@ function rowToAchievement(row: AchievementRow): AchievementState {
 export async function fetchUserByLoginKey(
   loginKey: string,
 ): Promise<UserRow | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("users")
     .select("*")
     .eq("login_key", loginKey)
@@ -126,7 +133,7 @@ export async function createUser(
   const today = new Date();
   const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("users")
     .insert({
       uid,
@@ -148,10 +155,10 @@ export async function createUser(
 
 export async function fetchGameState(uid: string): Promise<GameState | null> {
   const [userRes, habitsRes, plantsRes, achievementsRes] = await Promise.all([
-    supabase.from("users").select("*").eq("uid", uid).maybeSingle(),
-    supabase.from("habits").select("*").eq("user_uid", uid),
-    supabase.from("plants").select("*").eq("user_uid", uid).order("slot_index"),
-    supabase.from("achievements").select("*").eq("user_uid", uid),
+    getSupabase().from("users").select("*").eq("uid", uid).maybeSingle(),
+    getSupabase().from("habits").select("*").eq("user_uid", uid),
+    getSupabase().from("plants").select("*").eq("user_uid", uid).order("slot_index"),
+    getSupabase().from("achievements").select("*").eq("user_uid", uid),
   ]);
 
   const user = userRes.data as UserRow | null;
@@ -194,7 +201,7 @@ export async function syncUserStats(
     lastResetDate: string;
   },
 ): Promise<void> {
-  await supabase
+  await getSupabase()
     .from("users")
     .update({
       xp: stats.xp,
@@ -218,10 +225,10 @@ export async function saveHabits(uid: string, habits: Habit[]): Promise<void> {
     created_at: h.createdAt,
   }));
 
-  await supabase.from("habits").delete().eq("user_uid", uid);
+  await getSupabase().from("habits").delete().eq("user_uid", uid);
 
   if (rows.length > 0) {
-    await supabase.from("habits").insert(rows);
+    await getSupabase().from("habits").insert(rows);
   }
 }
 
@@ -230,7 +237,7 @@ export async function savePlantAtSlot(
   slotIndex: number,
   plant: Plant | null,
 ): Promise<void> {
-  await supabase
+  await getSupabase()
     .from("plants")
     .delete()
     .eq("user_uid", uid)
@@ -245,7 +252,7 @@ export async function savePlantAtSlot(
       planted_at: plant.plantedAt,
       growth_level: plant.growthLevel,
     };
-    await supabase.from("plants").insert(row);
+    await getSupabase().from("plants").insert(row);
   }
 }
 
@@ -259,15 +266,15 @@ export async function saveAchievements(
     status: a.status,
   }));
 
-  await supabase.from("achievements").delete().eq("user_uid", uid);
+  await getSupabase().from("achievements").delete().eq("user_uid", uid);
 
   if (rows.length > 0) {
-    await supabase.from("achievements").insert(rows);
+    await getSupabase().from("achievements").insert(rows);
   }
 }
 
 export async function fetchLeaderboard(limit = 100): Promise<UserProfile[]> {
-  const { data: users, error } = await supabase
+  const { data: users, error } = await getSupabase()
     .from("users")
     .select("uid, username, xp, level, streak")
     .order("level", { ascending: false })
@@ -295,7 +302,7 @@ export async function searchUsers(
   query: string,
   limit = 20,
 ): Promise<UserProfile[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("users")
     .select("uid, username, xp, level, streak")
     .ilike("username", `%${query}%`)
@@ -321,7 +328,7 @@ export async function searchUsers(
 }
 
 export async function fetchUserPlants(uid: string): Promise<(Plant | null)[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("plants")
     .select("*")
     .eq("user_uid", uid)
@@ -346,7 +353,7 @@ export async function updateUsername(
   uid: string,
   username: string,
 ): Promise<void> {
-  await supabase
+  await getSupabase()
     .from("users")
     .update({ username, updated_at: new Date().toISOString() })
     .eq("uid", uid);
