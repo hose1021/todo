@@ -83,6 +83,7 @@ export function clearLoginKey(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(LOGIN_KEY);
   localStorage.removeItem(LOGIN_NAME);
+  localStorage.removeItem("sb-zfyqycjgforbopsvonom-auth-token");
 }
 
 export async function buildSession(uuid: string) {

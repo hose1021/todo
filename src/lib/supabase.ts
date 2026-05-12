@@ -38,10 +38,6 @@ export function setCurrentJwt(jwt: string | null) {
   currentJwt = jwt;
 }
 
-if (typeof window !== "undefined") {
-  localStorage.removeItem("sb-zfyqycjgforbopsvonom-auth-token");
-}
-
 export interface UserRow {
   uid: string;
   login_key_hash: string;

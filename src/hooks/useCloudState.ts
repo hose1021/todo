@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { GameState, Habit, Plant, MAX_HABITS, MAX_PLANTS, XP_PER_COMPLETION, MS_PER_DAY, TICK_INTERVAL_MS } from "@/lib/types";
 import { addXP, getPlantGrowth } from "@/lib/gameLogic";
 import { getPlantType, GROWTH_LEVELS } from "@/lib/plants";
-import { playPlantSound, playCompleteSound, playDeleteSound, playLevelUpSound, setMuted } from "@/lib/sound";
+import { useSound } from "@/lib/sound";
 import { ACHIEVEMENTS, evaluateAchievements, initAchievementStates } from "@/lib/achievements";
 import {
   fetchGameState,
@@ -15,8 +15,6 @@ import {
   updateUsername,
 } from "@/lib/supabase";
 import { getDailyResetState } from "@/hooks/useDailyReset";
-
-const MUTE_KEY = "habbittodo_mute";
 
 function getToday(): string {
   const d = new Date();
@@ -66,25 +64,15 @@ export function useCloudState(uid: string) {
   const [state, setState] = useState<GameState>(initialState);
   const [loaded, setLoaded] = useState(false);
   const [levelUp, setLevelUp] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   const [fetchVersion, setFetchVersion] = useState(0);
-
-  useEffect(() => {
-    const savedMute = localStorage.getItem(MUTE_KEY);
-    if (savedMute === "true") {
-      setIsMuted(true);
-      setMuted(true);
-    }
-  }, []);
-
-  const toggleMute = useCallback(() => {
-    setIsMuted((prev) => {
-      const next = !prev;
-      localStorage.setItem(MUTE_KEY, String(next));
-      setMuted(next);
-      return next;
-    });
-  }, []);
+  const {
+    isMuted,
+    toggleMute,
+    playPlantSound,
+    playCompleteSound,
+    playDeleteSound,
+    playLevelUpSound,
+  } = useSound();
 
   useEffect(() => {
     if (!uid) return;

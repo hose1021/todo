@@ -14,6 +14,7 @@ interface Particle {
   rotation: number;
   delay: number;
   size: number;
+  duration: number;
 }
 
 const COLORS = ["#FF6B6B", "#FFD93D", "#4CAF50", "#4D96FF", "#FF922B", "#CC5DE8", "#F06595"];
@@ -35,6 +36,7 @@ export default function Confetti({ show }: ConfettiProps) {
       rotation: Math.random() * 360,
       delay: Math.random() * 0.3,
       size: 6 + Math.random() * 8,
+      duration: 2 + Math.random() * 2,
     }));
     setParticles(items);
   }, [show]);
@@ -54,7 +56,7 @@ export default function Confetti({ show }: ConfettiProps) {
             height: `${p.size * 0.6}px`,
             backgroundColor: p.color,
             transform: `rotate(${p.rotation}deg)`,
-            animation: `confettiFall ${2 + Math.random() * 2}s ease-in ${p.delay}s forwards`,
+            animation: `confettiFall ${p.duration}s ease-in ${p.delay}s forwards`,
             opacity: 0,
           }}
         />
