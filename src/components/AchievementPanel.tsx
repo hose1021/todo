@@ -6,7 +6,6 @@ import { AchievementState } from "@/lib/types";
 interface AchievementPanelProps {
   achievements: AchievementState[];
   onClaim: (id: string) => void;
-  onClose: () => void;
   getProgressFor: (id: string) => { current: number; target: number };
 }
 
@@ -30,7 +29,6 @@ const STATUS_SORT_ORDER: Record<string, number> = {
 export default function AchievementPanel({
   achievements,
   onClaim,
-  onClose,
   getProgressFor,
 }: AchievementPanelProps) {
   const items = ACHIEVEMENTS.map((def) => {
@@ -62,17 +60,9 @@ export default function AchievementPanel({
 
   return (
     <div className="rounded-[10px] border border-[#33404d] bg-[#222b36] p-3 shadow-lg shadow-black/20">
-      <div className="flex items-center justify-between px-1 pb-3">
-        <h3 className="text-xs font-black uppercase tracking-[0.18em] text-[#91a0af]">
-          Достижения
-        </h3>
-        <button
-          onClick={onClose}
-          className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#3a4653] bg-[#242f3a] text-sm text-[#8795a4] hover:bg-[#2d3a47] hover:text-[#bcc8d4] transition-colors"
-        >
-          ✕
-        </button>
-      </div>
+      <h3 className="px-1 pb-3 text-xs font-black uppercase tracking-[0.18em] text-[#91a0af]">
+        Достижения
+      </h3>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         {items.map((item) => {
           const { ratio, progress } = getProgressInfo(item);

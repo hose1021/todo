@@ -24,6 +24,12 @@ import {
   saveAchievements,
   savePlantAtSlot,
 } from "@/lib/supabase";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function Home() {
   const {
@@ -177,24 +183,23 @@ export default function Home() {
         }}
       />
 
-      {showAchievements && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
-          onClick={() => setShowAchievements(false)}
-        >
-          <div
-            className="max-h-[80vh] w-full max-w-lg overflow-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <AchievementPanel
-              achievements={achievements}
-              onClaim={claimAchievement}
-              onClose={() => setShowAchievements(false)}
-              getProgressFor={getProgressFor}
-            />
-          </div>
-        </div>
-      )}
+      <Dialog
+        open={showAchievements}
+        onOpenChange={(open) => {
+          if (!open) setShowAchievements(false);
+        }}
+      >
+        <DialogContent className="max-w-lg p-0 gap-0" showCloseButton={true}>
+          <DialogHeader className="sr-only">
+            <DialogTitle>Достижения</DialogTitle>
+          </DialogHeader>
+          <AchievementPanel
+            achievements={achievements}
+            onClaim={claimAchievement}
+            getProgressFor={getProgressFor}
+          />
+        </DialogContent>
+      </Dialog>
 
       {showLeaderboard && (
         <LeaderboardPanel
