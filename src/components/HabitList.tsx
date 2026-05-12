@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Habit } from "@/lib/types";
 import { XP_PER_COMPLETION, MAX_HABITS } from "@/lib/types";
+import { useHabitSwipe } from "@/hooks/useHabitSwipe";
 
 type SortMode = "created" | "name" | "completions";
 
@@ -224,31 +225,11 @@ function HabitRow({
   onConfirmDelete,
   onCancelDelete,
 }: HabitRowProps) {
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
-  const [swiped, setSwiped] = useState<"complete" | "delete" | null>(null);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (isEditing || isConfirming) return;
-    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStart.current || isEditing || isConfirming) return;
-    const dx = e.changedTouches[0].clientX - touchStart.current.x;
-    const dy = e.changedTouches[0].clientY - touchStart.current.y;
-    touchStart.current = null;
-
-    if (Math.abs(dx) < 40 || Math.abs(dy) > Math.abs(dx)) return;
-
-    if (dx > 40) {
-      setSwiped("complete");
-      setTimeout(() => setSwiped(null), 300);
-      onComplete();
-    } else if (dx < -40) {
-      setSwiped("delete");
-      onConfirmDelete();
-    }
-  };
+  const { swiped, handleTouchStart, handleTouchEnd } = useHabitSwipe({
+    isDisabled: isEditing || isConfirming,
+    onSwipeRight: onComplete,
+    onSwipeLeft: onConfirmDelete,
+  });
 
   const SWIPE_CLASSES: Record<string, string> = {
     complete: "border-[#4CAF50] bg-[#2a4a3a]",

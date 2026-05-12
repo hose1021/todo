@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import PlantComp from "./Plant";
-import { Plant as PlantType, MAX_PLANTS, LONG_PRESS_MS } from "@/lib/types";
+import { Plant as PlantType, MAX_PLANTS } from "@/lib/types";
+import { useGardenCellInteraction } from "@/hooks/useGardenCellInteraction";
 import { getPlantGrowth, formatTimeRemaining } from "@/lib/gameLogic";
 import { getPlantType, GROWTH_LEVELS } from "@/lib/plants";
 import {
@@ -378,34 +379,11 @@ function GardenCell({
   onSelect: () => void;
   onLongPress: () => void;
 }) {
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const touched = useRef(false);
-
-  const handleTouchStart = useCallback(
-    (e: React.TouchEvent) => {
-      e.preventDefault();
-      touched.current = true;
-      longPressTimer.current = setTimeout(() => {
-        if (touched.current && plant) {
-          onLongPress();
-          touched.current = false;
-        }
-      }, LONG_PRESS_MS);
-    },
-    [plant, onLongPress],
-  );
-
-  const handleTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      e.preventDefault();
-      if (longPressTimer.current) clearTimeout(longPressTimer.current);
-      if (touched.current) {
-        onSelect();
-      }
-      touched.current = false;
-    },
-    [onSelect],
-  );
+  const { handleTouchStart, handleTouchEnd } = useGardenCellInteraction({
+    hasPlant: plant !== null,
+    onSelect,
+    onLongPress,
+  });
 
   const CELL_BG_CLASS: Record<string, string> = {
     selected: "bg-[#2e4442]",
