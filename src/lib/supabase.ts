@@ -43,7 +43,7 @@ if (typeof window !== "undefined") {
 
 export interface UserRow {
   uid: string;
-  login_key: string;
+  login_key_hash: string;
   username: string;
   xp: number;
   level: number;
@@ -114,43 +114,17 @@ function rowToAchievement(row: AchievementRow): AchievementState {
   };
 }
 
-export async function fetchUserByLoginKey(
-  loginKey: string,
-): Promise<UserRow | null> {
+export async function authUser(
+  loginKeyHash: string,
+  username: string,
+): Promise<string | null> {
   const { data, error } = await getSupabase()
-    .from("users")
-    .select("*")
-    .eq("login_key", loginKey)
-    .maybeSingle();
-  if (error) return null;
-  return data as UserRow | null;
-}
-
-export async function createUser(
-  loginKey: string,
-  uid: string,
-): Promise<UserRow> {
-  const today = new Date();
-  const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-
-  const { data, error } = await getSupabase()
-    .from("users")
-    .insert({
-      uid,
-      login_key: loginKey,
-      username: "",
-      xp: 0,
-      level: 1,
-      crystals: 0,
-      streak: 0,
-      last_completion_date: "",
-      last_reset_date: dateStr,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data as UserRow;
+    .rpc("auth_user", {
+      p_login_key_hash: loginKeyHash,
+      p_username: username,
+    });
+  if (error || !data) return null;
+  return data as string;
 }
 
 export async function fetchGameState(uid: string): Promise<GameState | null> {

@@ -1,8 +1,15 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { getStoredLoginKey, storeLoginKey, clearLoginKey, buildSession } from "@/lib/auth";
-import { fetchUserByLoginKey, createUser, setCurrentJwt } from "@/lib/supabase";
+import {
+  getStoredLoginKey,
+  getStoredLoginName,
+  storeLoginCreds,
+  clearLoginKey,
+  buildSession,
+  hashLoginKey,
+} from "@/lib/auth";
+import { authUser, setCurrentJwt } from "@/lib/supabase";
 
 type AuthStatus = "checking" | "loggedOut" | "loggedIn";
 
@@ -10,59 +17,58 @@ interface AuthState {
   status: AuthStatus;
   uid: string | null;
   loginKey: string | null;
+  username: string | null;
 }
 
 export function useAuth() {
-  const [auth, setAuth] = useState<AuthState>({ status: "checking", uid: null, loginKey: null });
+  const [auth, setAuth] = useState<AuthState>({
+    status: "checking",
+    uid: null,
+    loginKey: null,
+    username: null,
+  });
 
   useEffect(() => {
-    const stored = getStoredLoginKey();
-    if (!stored) {
-      setAuth({ status: "loggedOut", uid: null, loginKey: null });
+    const storedKey = getStoredLoginKey();
+    const storedName = getStoredLoginName();
+    if (!storedKey) {
+      setAuth({ status: "loggedOut", uid: null, loginKey: null, username: null });
       return;
     }
 
-    fetchUserByLoginKey(stored).then(async (user) => {
-      if (!user) {
+    hashLoginKey(storedKey)
+      .then((hash) => authUser(hash, storedName || ""))
+      .then(async (uid) => {
+        if (!uid) {
+          clearLoginKey();
+          setCurrentJwt(null);
+          setAuth({ status: "loggedOut", uid: null, loginKey: null, username: null });
+          return;
+        }
+        const session = await buildSession(uid);
+        setCurrentJwt(session.access_token);
+        setAuth({ status: "loggedIn", uid, loginKey: storedKey, username: storedName });
+      })
+      .catch(() => {
         clearLoginKey();
         setCurrentJwt(null);
-        setAuth({ status: "loggedOut", uid: null, loginKey: null });
-        return;
-      }
-      const session = await buildSession(user.uid);
-      setCurrentJwt(session.access_token);
-      storeLoginKey(stored);
-      setAuth({ status: "loggedIn", uid: user.uid, loginKey: stored });
-    }).catch(() => {
-      clearLoginKey();
-      setCurrentJwt(null);
-      setAuth({ status: "loggedOut", uid: null, loginKey: null });
-    });
+        setAuth({ status: "loggedOut", uid: null, loginKey: null, username: null });
+      });
   }, []);
 
   const login = useCallback(
-    async (loginKey: string): Promise<string | false> => {
-      if (!loginKey.trim()) return false;
-      const trimmed = loginKey.trim();
+    async (secret: string, name: string): Promise<string | false> => {
+      if (!secret.trim()) return false;
       try {
-        let uid: string;
+        const hash = await hashLoginKey(secret.trim());
+        const uid = await authUser(hash, name.trim());
 
-        const existing = await fetchUserByLoginKey(trimmed);
-        if (existing) {
-          uid = existing.uid;
-        } else {
-          uid = crypto.randomUUID();
-          const session = await buildSession(uid);
-          setCurrentJwt(session.access_token);
-          await createUser(trimmed, uid);
-        }
+        if (!uid) return false;
 
-        if (existing) {
-          const session = await buildSession(uid);
-          setCurrentJwt(session.access_token);
-        }
-        storeLoginKey(trimmed);
-        setAuth({ status: "loggedIn", uid, loginKey: trimmed });
+        const session = await buildSession(uid);
+        setCurrentJwt(session.access_token);
+        storeLoginCreds(secret.trim(), name.trim());
+        setAuth({ status: "loggedIn", uid, loginKey: secret.trim(), username: name.trim() });
         return uid;
       } catch {
         return false;
@@ -74,7 +80,7 @@ export function useAuth() {
   const logout = useCallback(() => {
     clearLoginKey();
     setCurrentJwt(null);
-    setAuth({ status: "loggedOut", uid: null, loginKey: null });
+    setAuth({ status: "loggedOut", uid: null, loginKey: null, username: null });
   }, []);
 
   return { ...auth, login, logout };

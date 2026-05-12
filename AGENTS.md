@@ -26,7 +26,9 @@ All three are `NEXT_PUBLIC_*` (bundled into the static export at build time). `.
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — Supabase publishable key
 - `NEXT_PUBLIC_SUPABASE_JWT_SECRET` — HS256 secret for custom JWT signing (client-side; used for RLS)
 
-Database schema: `sql/schema.sql` — run once in Supabase SQL Editor to create tables, indexes, and RLS policies.
+Database schema: `sql/schema.sql` — run once in Supabase SQL Editor to create tables, indexes, RLS policies, and the `auth_user` RPC.
+
+CI deploy (`.github/workflows/deploy.yml`): these vars must be set as **GitHub Secrets** in the repo. Without them, the app builds but Supabase calls fail at runtime.
 
 ## Architecture
 
@@ -47,12 +49,12 @@ src/
 │   ├── Confetti.tsx       # particle overlay on level-up (~2.5s)
 │   ├── HelpModal.tsx      # first-visit tutorial (localStorage: "habbittodo_help_seen")
 │   ├── AchievementPanel.tsx # 15 achievements grid, progress bars, claim button
-│   ├── LoginScreen.tsx    # login key entry, local data migration prompt
+│   ├── LoginScreen.tsx    # two-field login (secret key + name), local data migration prompt
 │   ├── LeaderboardPanel.tsx # leaderboard from Supabase, view other players
 │   └── UserGarden.tsx     # view another player's garden (read-only 6×6 grid)
 ├── hooks/
 │   ├── useCloudState.ts  # primary state hook (Supabase-backed), same API as useGameState
-│   ├── useAuth.ts        # login key auth, JWT session management
+│   ├── useAuth.ts        # secret key + name auth, JWT session management
 │   └── useGameState.ts    # kept for migrateIfNeeded() — converts old local saves to current format
 ├── lib/
 │   ├── types.ts           # Habit, Plant, GameState, AchievementDef, constants (MAX_HABITS=50, MAX_PLANTS=36, XP_PER_COMPLETION=10)
@@ -60,8 +62,8 @@ src/
 │   ├── gameLogic.ts       # getXPForLevel, addXP, getPlantGrowth, getPlantScaleSaturate, formatTimeRemaining
 │   ├── achievements.ts    # 15 ACHIEVEMENTS, evaluateAchievements, initAchievementStates
 │   ├── storage.ts         # localStorage under "habbittodo_save"
-│   ├── supabase.ts        # Supabase client + CRUD: fetchGameState, syncUserStats, saveHabits, savePlantAtSlot, saveAchievements, fetchLeaderboard, updateUsername
-│   ├── auth.ts            # JWT signing (HS256 via Web Crypto), login key localStorage management
+│   ├── supabase.ts        # Supabase client + CRUD: fetchGameState, syncUserStats, saveHabits, savePlantAtSlot, saveAchievements, fetchLeaderboard, updateUsername, authUser (RPC)
+│   ├── auth.ts            # JWT signing (HS256 via Web Crypto), SHA-256 hashing, localStorage cred management
 │   ├── sound.ts           # Web Audio API: plant, complete, delete, levelUp
 │   └── utils.ts           # cn() helper (clsx + tailwind-merge)
 tests/
@@ -87,18 +89,24 @@ sql/
 - `useCloudState` is the primary state owner for logged-in users — same API as `useGameState` but persists to Supabase. `useGameState` only used for `migrateIfNeeded()` (local→cloud migration).
 - `next/image` is NOT used — all plants are emoji strings.
 - `GardenCell` is a `<div role="button" tabIndex={-1}>` (NOT `<button>`) — avoids nesting inside `PopoverTrigger`'s `<button>`.
+- Supabase client is **lazy-initialized** via `getSupabase()` — NOT a module-level `createClient()` call. This prevents SSR/prerender crashes in CI builds where env vars are missing. All DB calls go through `getSupabase()`, never a bare `supabase` export.
 
 ## Auth
 
-Custom JWT-based auth (no Supabase Auth service):
+Custom JWT-based auth (no Supabase Auth service), two-field login: **secret key + name**.
 
-1. User enters a **login key** (freeform text password).
-2. Client signs a **JWT** (HS256 via Web Crypto) using `NEXT_PUBLIC_SUPABASE_JWT_SECRET` — the JWT `sub` is a UUID, `role` = `authenticated`.
-3. JWT is passed as `Authorization: Bearer <token>` via a custom `authFetch` wrapper in `supabase.ts`.
-4. Supabase **RLS policies** use `auth.uid()` to enforce per-user row access.
-5. Login key stored in localStorage under `habbittodo_login_key`.
-6. First login **creates** a new user row (`createUser`). Subsequent logins **fetch** existing state (`fetchGameState`).
-7. `page.tsx` gates rendering: `"checking"` → spinner, `"loggedOut"` → `LoginScreen`, `"loggedIn"` → main app.
+1. User enters **secret key** (password type, hidden) and **name** (public, shown in leaderboard).
+2. Client hashes secret key with **SHA-256** (`hashLoginKey()` in `auth.ts` via Web Crypto).
+3. Client calls **`authUser(hash, name)`** → Supabase RPC `auth_user` (SECURITY DEFINER, bypasses RLS):
+   - Hash match → returns existing `uid` (updates username if changed).
+   - No match → inserts new row (`gen_random_uuid()`, hash, name) → returns new `uid`.
+4. Client builds **JWT** (HS256 via Web Crypto) with `sub = uid`, `role = authenticated`, signed with `NEXT_PUBLIC_SUPABASE_JWT_SECRET`.
+5. JWT passed as `Authorization: Bearer <token>` via custom `authFetch` wrapper in `supabase.ts`.
+6. RLS policies use `auth.uid()` to enforce per-user row access.
+7. Credentials stored in localStorage: `habbittodo_login_key` (secret) + `habbittodo_login_name` (name).
+8. `page.tsx` gates rendering: `"checking"` → spinner, `"loggedOut"` → `LoginScreen`, `"loggedIn"` → main app.
+
+**Critical**: the `users` table column is `login_key_hash` (TEXT UNIQUE), NOT `login_key`. The plaintext key is never stored or transmitted — only its SHA-256 hex digest. The `users_insert` RLS policy is removed; all user creation goes through the `auth_user` RPC.
 
 ## Data model
 

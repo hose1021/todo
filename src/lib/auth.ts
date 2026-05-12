@@ -1,4 +1,13 @@
 const LOGIN_KEY = "habbittodo_login_key";
+const LOGIN_NAME = "habbittodo_login_name";
+
+export async function hashLoginKey(key: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(key);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 function base64UrlEncode(input: string): string {
   return btoa(input).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
@@ -56,14 +65,21 @@ export function getStoredLoginKey(): string | null {
   return localStorage.getItem(LOGIN_KEY);
 }
 
-export function storeLoginKey(loginKey: string): void {
+export function getStoredLoginName(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(LOGIN_NAME);
+}
+
+export function storeLoginCreds(loginKey: string, name: string): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(LOGIN_KEY, loginKey);
+  localStorage.setItem(LOGIN_NAME, name);
 }
 
 export function clearLoginKey(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(LOGIN_KEY);
+  localStorage.removeItem(LOGIN_NAME);
 }
 
 export async function buildSession(uuid: string) {

@@ -7,10 +7,10 @@ DROP TABLE IF EXISTS public.plants CASCADE;
 DROP TABLE IF EXISTS public.habits CASCADE;
 DROP TABLE IF EXISTS public.users CASCADE;
 
--- Profiles (uid = UUID, login_key = user-chosen text key)
+-- Profiles (uid = UUID, login_key_hash = SHA-256 of user secret key)
 CREATE TABLE public.users (
   uid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  login_key TEXT UNIQUE NOT NULL,
+  login_key_hash TEXT UNIQUE NOT NULL,
   username TEXT NOT NULL DEFAULT '',
   xp INTEGER NOT NULL DEFAULT 0,
   level INTEGER NOT NULL DEFAULT 1,
@@ -52,7 +52,7 @@ CREATE TABLE public.achievements (
 );
 
 -- Indexes
-CREATE INDEX idx_users_login_key ON public.users(login_key);
+CREATE INDEX idx_users_login_key_hash ON public.users(login_key_hash);
 CREATE INDEX idx_habits_user_uid ON public.habits(user_uid);
 CREATE INDEX idx_plants_user_uid ON public.plants(user_uid);
 CREATE INDEX idx_achievements_user_uid ON public.achievements(user_uid);
@@ -65,16 +65,13 @@ ALTER TABLE public.habits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.plants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.achievements ENABLE ROW LEVEL SECURITY;
 
--- Users: owner can do everything, public can SELECT (leaderboard), anonymous INSERT for signup
+-- Users: owner can do everything
 CREATE POLICY users_owner ON public.users
   FOR ALL
   USING (uid = auth.uid())
   WITH CHECK (uid = auth.uid());
 
-CREATE POLICY users_insert ON public.users
-  FOR INSERT
-  WITH CHECK (true);
-
+-- Users: public read for leaderboard (limited fields exposed via SELECT)
 CREATE POLICY users_public_read ON public.users
   FOR SELECT
   USING (true);
@@ -100,3 +97,35 @@ CREATE POLICY achievements_owner ON public.achievements
   FOR ALL
   USING (user_uid = auth.uid())
   WITH CHECK (user_uid = auth.uid());
+
+-- Auth RPC: lookup or create user by hash + username
+-- SECURITY DEFINER bypasses RLS — safe since it only exposes uid
+CREATE OR REPLACE FUNCTION auth_user(
+  p_login_key_hash TEXT,
+  p_username TEXT
+) RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_uid UUID;
+BEGIN
+  -- Look up existing user by hash
+  SELECT uid INTO v_uid FROM users WHERE login_key_hash = p_login_key_hash;
+
+  IF FOUND THEN
+    -- Username check: if stored username differs, update it
+    UPDATE users SET username = p_username, updated_at = NOW()
+    WHERE uid = v_uid AND username IS DISTINCT FROM p_username;
+
+    RETURN v_uid;
+  END IF;
+
+  -- New user: insert with provided uid
+  INSERT INTO users (uid, login_key_hash, username)
+  VALUES (gen_random_uuid(), p_login_key_hash, p_username)
+  RETURNING uid INTO v_uid;
+
+  RETURN v_uid;
+END;
+$$;
