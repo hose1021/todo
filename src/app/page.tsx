@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useAppState } from "@/hooks/useAppState";
 import Garden from "@/components/Garden";
 import HabitList from "@/components/HabitList";
@@ -15,6 +15,7 @@ import LeaderboardPanel from "@/components/LeaderboardPanel";
 import UserGarden from "@/components/UserGarden";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 import { MAX_HABITS } from "@/lib/types";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { loadGame, clearGame } from "@/lib/storage";
 import { migrateIfNeeded } from "@/hooks/useGameState";
 import {
@@ -105,35 +106,26 @@ export default function Home() {
       await saveAchievements(uid, migrated.achievements);
       clearGame();
       refreshState();
-    } catch {
-      // silently fail
+    } catch (error) {
+      console.error("Migration failed:", error);
     }
   }, [refreshState]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      )
-        return;
-      if (e.key === "Enter" && selectedHabitId) {
-        e.preventDefault();
-        completeHabit(selectedHabitId);
-      }
-      if (e.key === "Escape") {
-        setSelectedHabitId(null);
-        setSelectedSlot(null);
-        setShowAddHabit(false);
-        setShowAchievements(false);
-        setShopSheetOpen(false);
-        setShowLeaderboard(false);
-        setViewUserUid(null);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedHabitId, completeHabit]);
+  const dismissAll = useCallback(() => {
+    setSelectedHabitId(null);
+    setSelectedSlot(null);
+    setShowAddHabit(false);
+    setShowAchievements(false);
+    setShopSheetOpen(false);
+    setShowLeaderboard(false);
+    setViewUserUid(null);
+  }, []);
+
+  useKeyboardShortcuts({
+    selectedHabitId,
+    onCompleteHabit: completeHabit,
+    onDismissAll: dismissAll,
+  });
 
   if (status === "checking") {
     return (

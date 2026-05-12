@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import PlantComp from "./Plant";
-import { Plant as PlantType } from "@/lib/types";
+import { Plant as PlantType, MAX_PLANTS, MAX_GROWTH_LEVEL } from "@/lib/types";
+import { useGardenCellInteraction } from "@/hooks/useGardenCellInteraction";
 import { getPlantGrowth, formatTimeRemaining } from "@/lib/gameLogic";
 import { getPlantType, GROWTH_LEVELS } from "@/lib/plants";
 import {
@@ -30,7 +31,7 @@ interface GardenProps {
 }
 
 const GRID_COLS = 6;
-const TOTAL_SLOTS = 36;
+const TOTAL_SLOTS = MAX_PLANTS;
 
 export default function Garden({
   plants,
@@ -96,7 +97,7 @@ export default function Garden({
 
           let canUpgrade = false;
           let upgradeCost = 0;
-          if (plant && def && plant.growthLevel < 3 && !isGrowing) {
+          if (plant && def && plant.growthLevel < MAX_GROWTH_LEVEL && !isGrowing) {
             const nextLevel = plant.growthLevel + 1;
             const costMult = GROWTH_LEVELS[nextLevel]?.multiplier.cost ?? 1;
             upgradeCost = Math.round(def.cost * costMult);
@@ -199,7 +200,8 @@ export default function Garden({
         selectedSlot !== null &&
         plants[selectedSlot] &&
         (() => {
-          const plant = plants[selectedSlot]!;
+          const plant = plants[selectedSlot];
+          if (!plant) return null;
           const growth = getPlantGrowth(plant);
           const def = getPlantType(plant.type);
 
@@ -235,11 +237,13 @@ export default function Garden({
                     crystals={crystals}
                     confirmRemove={confirmRemove}
                     onUpgradeNow={() => {
-                      onUpgrade?.(selectedSlot!);
+                      if (selectedSlot === null) return;
+                      onUpgrade?.(selectedSlot);
                       onSelect(null);
                     }}
                     onRemoveNow={() => {
-                      onRemove?.(selectedSlot!);
+                      if (selectedSlot === null) return;
+                      onRemove?.(selectedSlot);
                       onSelect(null);
                       setConfirmRemove(false);
                     }}
@@ -278,7 +282,7 @@ function PlantDetailPanel({
 }) {
   let upgradeCost = 0;
   let canUpgradeNow = false;
-  if (def && plant.growthLevel < 3 && !growth.isGrowing) {
+  if (def && plant.growthLevel < MAX_GROWTH_LEVEL && !growth.isGrowing) {
     const nextLevel = plant.growthLevel + 1;
     const costMult = GROWTH_LEVELS[nextLevel]?.multiplier.cost ?? 1;
     upgradeCost = Math.round(def.cost * costMult);
@@ -306,14 +310,14 @@ function PlantDetailPanel({
             />
           </div>
         </>
-      ) : plant.growthLevel < 3 ? (
+      ) : plant.growthLevel < MAX_GROWTH_LEVEL ? (
         <p className="text-xs text-[#a5d6b8]">{upgradeCost} 💎 — улучшить</p>
       ) : (
         <p className="text-xs text-[#657486]">Максимальный уровень</p>
       )}
 
       <div className="flex gap-2 mt-2">
-        {plant.growthLevel < 3 && !growth.isGrowing && (
+        {plant.growthLevel < MAX_GROWTH_LEVEL && !growth.isGrowing && (
           <button
             onClick={onUpgradeNow}
             disabled={!canUpgradeNow}
@@ -375,34 +379,19 @@ function GardenCell({
   onSelect: () => void;
   onLongPress: () => void;
 }) {
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const touched = useRef(false);
+  const { handleTouchStart, handleTouchEnd } = useGardenCellInteraction({
+    hasPlant: plant !== null,
+    onSelect,
+    onLongPress,
+  });
 
-  const handleTouchStart = useCallback(
-    (e: React.TouchEvent) => {
-      e.preventDefault();
-      touched.current = true;
-      longPressTimer.current = setTimeout(() => {
-        if (touched.current && plant) {
-          onLongPress();
-          touched.current = false;
-        }
-      }, 500);
-    },
-    [plant, onLongPress],
-  );
+  const CELL_BG_CLASS: Record<string, string> = {
+    selected: "bg-[#2e4442]",
+    planted: "bg-[#222b36] hover:bg-[#273440]",
+    empty: "cursor-pointer bg-[#222b36]/70 hover:bg-[#2a3a2a]",
+  };
 
-  const handleTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      e.preventDefault();
-      if (longPressTimer.current) clearTimeout(longPressTimer.current);
-      if (touched.current) {
-        onSelect();
-      }
-      touched.current = false;
-    },
-    [onSelect],
-  );
+  const CELL_MIN_HEIGHT = "6rem";
 
   return (
     <div
@@ -416,13 +405,9 @@ function GardenCell({
         }
       }}
       className={`group relative w-full flex flex-col items-center justify-center border-b border-r border-dashed border-[#33404d] transition-colors duration-200 ${
-        isSelected
-          ? "bg-[#2e4442]"
-          : plant
-            ? "bg-[#222b36] hover:bg-[#273440]"
-            : "cursor-pointer bg-[#222b36]/70 hover:bg-[#2a3a2a]"
+        isSelected ? CELL_BG_CLASS.selected : plant ? CELL_BG_CLASS.planted : CELL_BG_CLASS.empty
       }`}
-      style={{ minHeight: "6rem", height: "6rem", touchAction: "manipulation" }}
+      style={{ minHeight: CELL_MIN_HEIGHT, height: CELL_MIN_HEIGHT, touchAction: "manipulation" }}
       aria-label={plant ? `Растение` : "Пустая клетка — купить растение"}
       role="button"
       tabIndex={-1}

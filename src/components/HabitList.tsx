@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Habit } from "@/lib/types";
 import { XP_PER_COMPLETION, MAX_HABITS } from "@/lib/types";
+import { useHabitSwipe } from "@/hooks/useHabitSwipe";
 
 type SortMode = "created" | "name" | "completions";
 
@@ -34,7 +35,7 @@ export default function HabitList({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("created");
   const [floats, setFloats] = useState<Record<string, boolean>>({});
-  const editInputRef = useRef<HTMLInputElement>(null!);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (editingId) editInputRef.current?.focus();
@@ -76,7 +77,7 @@ export default function HabitList({
 
   const completeWithFloat = useCallback(
     (id: string) => {
-      setFloats((f) => ({ ...f, [id]: true }));
+      setFloats((float) => ({ ...float, [id]: true }));
       setTimeout(
         () =>
           setFloats((f) => {
@@ -191,11 +192,11 @@ interface HabitRowProps {
   isEditing: boolean;
   isConfirming: boolean;
   editName: string;
-  editInputRef: React.RefObject<HTMLInputElement>;
+  editInputRef: React.RefObject<HTMLInputElement | null>;
   floats: Record<string, boolean>;
   onSelect: () => void;
   onStartEdit: () => void;
-  onEditNameChange: (v: string) => void;
+  onEditNameChange: (value: string) => void;
   onSubmitRename: () => void;
   onCancelEdit: () => void;
   onComplete: () => void;
@@ -224,40 +225,22 @@ function HabitRow({
   onConfirmDelete,
   onCancelDelete,
 }: HabitRowProps) {
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
-  const [swiped, setSwiped] = useState<"complete" | "delete" | null>(null);
+  const { swiped, handleTouchStart, handleTouchEnd } = useHabitSwipe({
+    isDisabled: isEditing || isConfirming,
+    onSwipeRight: onComplete,
+    onSwipeLeft: onConfirmDelete,
+  });
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (isEditing || isConfirming) return;
-    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStart.current || isEditing || isConfirming) return;
-    const dx = e.changedTouches[0].clientX - touchStart.current.x;
-    const dy = e.changedTouches[0].clientY - touchStart.current.y;
-    touchStart.current = null;
-
-    if (Math.abs(dx) < 40 || Math.abs(dy) > Math.abs(dx)) return;
-
-    if (dx > 40) {
-      setSwiped("complete");
-      setTimeout(() => setSwiped(null), 300);
-      onComplete();
-    } else if (dx < -40) {
-      setSwiped("delete");
-      onConfirmDelete();
-    }
+  const SWIPE_CLASSES: Record<string, string> = {
+    complete: "border-[#4CAF50] bg-[#2a4a3a]",
+    delete: "border-[#c0392b] bg-[#3a2a2a]",
+    default: "border-[#303b47] bg-[#1d2530] hover:border-[#3e4c5b] hover:bg-[#242f3a]",
   };
 
   const rowClass = `flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 transition-all ${
     isSelected
       ? "scale-[1.01] border-[#55746e] bg-[#2e4442] shadow-md shadow-black/20"
-      : swiped === "complete"
-        ? "border-[#4CAF50] bg-[#2a4a3a]"
-        : swiped === "delete"
-          ? "border-[#c0392b] bg-[#3a2a2a]"
-          : "border-[#303b47] bg-[#1d2530] hover:border-[#3e4c5b] hover:bg-[#242f3a]"
+      : SWIPE_CLASSES[swiped ?? "default"]
   }`;
 
   return (

@@ -1,4 +1,4 @@
-import { AchievementDef, GameState } from "./types";
+import { AchievementDef, GameState, MAX_GROWTH_LEVEL } from "./types";
 
 function maxCompletions(state: GameState): number {
   if (state.habits.length === 0) return 0;
@@ -21,10 +21,11 @@ function maxGrowthLevel(state: GameState): number {
   return max;
 }
 
+const GARDEN_CORNERS = [0, 5, 30, 35];
+
 function cornersFilled(state: GameState): number {
-  const corners = [0, 5, 30, 35];
   let filled = 0;
-  for (const idx of corners) {
+  for (const idx of GARDEN_CORNERS) {
     if (state.plants[idx] !== null) filled++;
   }
   return filled;
@@ -41,7 +42,7 @@ function uniqueTypesPlanted(state: GameState): number {
 function plantsAtLevel3(state: GameState): number {
   let count = 0;
   for (const plant of state.plants) {
-    if (plant && plant.growthLevel >= 3) count++;
+    if (plant && plant.growthLevel >= MAX_GROWTH_LEVEL) count++;
   }
   return count;
 }
@@ -52,8 +53,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     emoji: "🌱",
     name: "Действие!",
     description: "Создать 1 привычку",
-    isUnlocked: (s) => s.habits.length >= 1,
-    getProgress: (s) => ({ current: Math.min(s.habits.length, 1), target: 1 }),
+    isUnlocked: (gameState) => gameState.habits.length >= 1,
+    getProgress: (gameState) => ({ current: Math.min(gameState.habits.length, 1), target: 1 }),
     rewardCrystals: 7,
   },
   {
@@ -61,8 +62,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     emoji: "🔥",
     name: "3 дня",
     description: "Стрик 3 дня подряд",
-    isUnlocked: (s) => s.streak >= 3,
-    getProgress: (s) => ({ current: Math.min(s.streak, 3), target: 3 }),
+    isUnlocked: (gameState) => gameState.streak >= 3,
+    getProgress: (gameState) => ({ current: Math.min(gameState.streak, 3), target: 3 }),
     rewardCrystals: 15,
   },
   {
@@ -70,8 +71,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     emoji: "✋",
     name: "Дай пять!",
     description: "Выполнить привычку 5 раз",
-    isUnlocked: (s) => maxCompletions(s) >= 5,
-    getProgress: (s) => ({ current: Math.min(maxCompletions(s), 5), target: 5 }),
+    isUnlocked: (gameState) => maxCompletions(gameState) >= 5,
+    getProgress: (gameState) => ({ current: Math.min(maxCompletions(gameState), 5), target: 5 }),
     rewardCrystals: 15,
   },
   {
@@ -79,8 +80,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     emoji: "9️⃣",
     name: "3×3",
     description: "Стрик 9 дней подряд",
-    isUnlocked: (s) => s.streak >= 9,
-    getProgress: (s) => ({ current: Math.min(s.streak, 9), target: 9 }),
+    isUnlocked: (gameState) => gameState.streak >= 9,
+    getProgress: (gameState) => ({ current: Math.min(gameState.streak, 9), target: 9 }),
     rewardCrystals: 30,
   },
   {
@@ -88,8 +89,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     emoji: "🎳",
     name: "Страйк!",
     description: "Выполнить привычку 10 раз",
-    isUnlocked: (s) => maxCompletions(s) >= 10,
-    getProgress: (s) => ({ current: Math.min(maxCompletions(s), 10), target: 10 }),
+    isUnlocked: (gameState) => maxCompletions(gameState) >= 10,
+    getProgress: (gameState) => ({ current: Math.min(maxCompletions(gameState), 10), target: 10 }),
     rewardCrystals: 25,
   },
   {
@@ -97,8 +98,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     emoji: "🌸",
     name: "Вишнёво!",
     description: "Выполнить привычку 100 раз",
-    isUnlocked: (s) => maxCompletions(s) >= 100,
-    getProgress: (s) => ({ current: Math.min(maxCompletions(s), 100), target: 100 }),
+    isUnlocked: (gameState) => maxCompletions(gameState) >= 100,
+    getProgress: (gameState) => ({ current: Math.min(maxCompletions(gameState), 100), target: 100 }),
     rewardCrystals: 0,
     rewardFlower: true,
   },
@@ -107,8 +108,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     emoji: "🎍",
     name: "Мастер привычек",
     description: "Выполнить привычку 365 раз",
-    isUnlocked: (s) => maxCompletions(s) >= 365,
-    getProgress: (s) => ({ current: Math.min(maxCompletions(s), 365), target: 365 }),
+    isUnlocked: (gameState) => maxCompletions(gameState) >= 365,
+    getProgress: (gameState) => ({ current: Math.min(maxCompletions(gameState), 365), target: 365 }),
     rewardCrystals: 0,
     rewardFlower: true,
   },
@@ -117,8 +118,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     emoji: "👑",
     name: "Режим бога",
     description: "Выполнить 10 000 привычек",
-    isUnlocked: (s) => totalCompletions(s) >= 10000,
-    getProgress: (s) => ({ current: Math.min(totalCompletions(s), 10000), target: 10000 }),
+    isUnlocked: (gameState) => totalCompletions(gameState) >= 10000,
+    getProgress: (gameState) => ({ current: Math.min(totalCompletions(gameState), 10000), target: 10000 }),
     rewardCrystals: 10000,
   },
   {
@@ -126,8 +127,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     emoji: "🌿",
     name: "Уровень 2!",
     description: "Вырастить цветок до 2 уровня",
-    isUnlocked: (s) => maxGrowthLevel(s) >= 2,
-    getProgress: (s) => ({ current: Math.min(maxGrowthLevel(s), 2), target: 2 }),
+    isUnlocked: (gameState) => maxGrowthLevel(gameState) >= 2,
+    getProgress: (gameState) => ({ current: Math.min(maxGrowthLevel(gameState), 2), target: 2 }),
     rewardCrystals: 50,
   },
   {
@@ -135,8 +136,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     emoji: "🌺",
     name: "Уровень 3!",
     description: "Вырастить цветок до 3 уровня",
-    isUnlocked: (s) => maxGrowthLevel(s) >= 3,
-    getProgress: (s) => ({ current: Math.min(maxGrowthLevel(s), 3), target: 3 }),
+    isUnlocked: (gameState) => maxGrowthLevel(gameState) >= 3,
+    getProgress: (gameState) => ({ current: Math.min(maxGrowthLevel(gameState), 3), target: 3 }),
     rewardCrystals: 100,
   },
   {
@@ -144,8 +145,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     emoji: "📍",
     name: "4 точки",
     description: "Посадить цветы по 4 углам сада",
-    isUnlocked: (s) => cornersFilled(s) >= 4,
-    getProgress: (s) => ({ current: Math.min(cornersFilled(s), 4), target: 4 }),
+    isUnlocked: (gameState) => cornersFilled(gameState) >= 4,
+    getProgress: (gameState) => ({ current: Math.min(cornersFilled(gameState), 4), target: 4 }),
     rewardCrystals: 25,
   },
   {
@@ -153,8 +154,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     emoji: "🥑",
     name: "Холи Гуакамоле!",
     description: "Посадить 18 цветов в саду",
-    isUnlocked: (s) => plantedCount(s) >= 18,
-    getProgress: (s) => ({ current: Math.min(plantedCount(s), 18), target: 18 }),
+    isUnlocked: (gameState) => plantedCount(gameState) >= 18,
+    getProgress: (gameState) => ({ current: Math.min(plantedCount(gameState), 18), target: 18 }),
     rewardCrystals: 75,
   },
   {
@@ -162,8 +163,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     emoji: "🌻",
     name: "Полный сад",
     description: "Заполнить весь сад (36 цветов)",
-    isUnlocked: (s) => plantedCount(s) >= 36,
-    getProgress: (s) => ({ current: Math.min(plantedCount(s), 36), target: 36 }),
+    isUnlocked: (gameState) => plantedCount(gameState) >= 36,
+    getProgress: (gameState) => ({ current: Math.min(plantedCount(gameState), 36), target: 36 }),
     rewardCrystals: 250,
   },
   {
@@ -171,8 +172,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     emoji: "🍀",
     name: "Клевер",
     description: "Посадить 4 разных вида растений",
-    isUnlocked: (s) => uniqueTypesPlanted(s) >= 4,
-    getProgress: (s) => ({ current: Math.min(uniqueTypesPlanted(s), 4), target: 4 }),
+    isUnlocked: (gameState) => uniqueTypesPlanted(gameState) >= 4,
+    getProgress: (gameState) => ({ current: Math.min(uniqueTypesPlanted(gameState), 4), target: 4 }),
     rewardCrystals: 0,
     rewardFlower: true,
   },
@@ -181,8 +182,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     emoji: "🌵",
     name: "Кактус",
     description: "Вырастить 3 растения до 3 уровня",
-    isUnlocked: (s) => plantsAtLevel3(s) >= 3,
-    getProgress: (s) => ({ current: Math.min(plantsAtLevel3(s), 3), target: 3 }),
+    isUnlocked: (gameState) => plantsAtLevel3(gameState) >= 3,
+    getProgress: (gameState) => ({ current: Math.min(plantsAtLevel3(gameState), 3), target: 3 }),
     rewardCrystals: 0,
     rewardFlower: true,
   },

@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Habit, Plant, AchievementState, GameState } from "@/lib/types";
+import { MAX_PLANTS } from "@/lib/types";
 import { initAchievementStates } from "@/lib/achievements";
 
 let currentJwt: string | null = null;
@@ -35,10 +36,6 @@ export function getSupabase(): SupabaseClient {
 
 export function setCurrentJwt(jwt: string | null) {
   currentJwt = jwt;
-}
-
-if (typeof window !== "undefined") {
-  localStorage.removeItem("sb-zfyqycjgforbopsvonom-auth-token");
 }
 
 export interface UserRow {
@@ -142,9 +139,9 @@ export async function fetchGameState(uid: string): Promise<GameState | null> {
   const plantsRows = (plantsRes.data || []) as PlantRow[];
   const achievementsRows = (achievementsRes.data || []) as AchievementRow[];
 
-  const plants: (Plant | null)[] = Array(36).fill(null);
+  const plants: (Plant | null)[] = Array(MAX_PLANTS).fill(null);
   for (const p of plantsRows) {
-    if (p.slot_index >= 0 && p.slot_index < 36) {
+    if (p.slot_index >= 0 && p.slot_index < MAX_PLANTS) {
       plants[p.slot_index] = rowToPlant(p);
     }
   }
@@ -309,13 +306,13 @@ export async function fetchUserPlants(uid: string): Promise<(Plant | null)[]> {
     .order("slot_index");
 
   if (error) {
-    return Array(36).fill(null);
+    return Array(MAX_PLANTS).fill(null);
   }
 
-  const plants: (Plant | null)[] = Array(36).fill(null);
+  const plants: (Plant | null)[] = Array(MAX_PLANTS).fill(null);
   if (data) {
     for (const p of data as PlantRow[]) {
-      if (p.slot_index >= 0 && p.slot_index < 36) {
+      if (p.slot_index >= 0 && p.slot_index < MAX_PLANTS) {
         plants[p.slot_index] = rowToPlant(p);
       }
     }

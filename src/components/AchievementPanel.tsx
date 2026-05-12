@@ -9,6 +9,23 @@ interface AchievementPanelProps {
   getProgressFor: (id: string) => { current: number; target: number };
 }
 
+interface ProgressInfo {
+  ratio: number;
+  progress: { current: number; target: number };
+}
+
+const STATUS_CLASSES: Record<string, string> = {
+  unlocked: "border-[#d5a63d] bg-[#2a3a2a]/80 shadow-[0_0_8px_rgba(213,166,61,0.15)]",
+  claimed: "border-[#304a38] bg-[#1d2b20]/60",
+  locked: "border-[#303b47] bg-[#1d2530]/60",
+};
+
+const STATUS_SORT_ORDER: Record<string, number> = {
+  unlocked: 0,
+  locked: 1,
+  claimed: 2,
+};
+
 export default function AchievementPanel({
   achievements,
   onClaim,
@@ -22,27 +39,19 @@ export default function AchievementPanel({
     };
   });
 
-  const getProgressRatio = (item: (typeof items)[number]) => {
-    if (item.status === "unlocked") return 1;
-    if (item.status === "claimed") return -1;
-
+  const getProgressInfo = (item: (typeof items)[number]): ProgressInfo => {
+    if (item.status !== "locked") {
+      return { ratio: 1, progress: { current: 1, target: 1 } };
+    }
     const progress = getProgressFor(item.def.id);
-
-    if (progress.target <= 0) return 0;
-
-    return Math.min(1, progress.current / progress.target);
+    const ratio = progress.target > 0 ? Math.min(1, progress.current / progress.target) : 0;
+    return { ratio, progress };
   };
 
   items.sort((a, b) => {
-    const sortOrder: Record<string, number> = {
-      unlocked: 0,
-      locked: 1,
-      claimed: 2,
-    };
-
     return (
-      sortOrder[a.status] - sortOrder[b.status] ||
-      getProgressRatio(b) - getProgressRatio(a) ||
+      STATUS_SORT_ORDER[a.status] - STATUS_SORT_ORDER[b.status] ||
+      getProgressInfo(b).ratio - getProgressInfo(a).ratio ||
       a.def.id.localeCompare(b.def.id)
     );
   });
@@ -55,28 +64,14 @@ export default function AchievementPanel({
         Достижения
       </h3>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-        {items.map(({ def, status }) => {
-          const progress =
-            status === "claimed"
-              ? { current: 1, target: 1 }
-              : status === "unlocked"
-                ? { current: 1, target: 1 }
-                : getProgressFor(def.id);
-          const ratio =
-            progress.target > 0
-              ? Math.min(1, progress.current / progress.target)
-              : 0;
+        {items.map((item) => {
+          const { ratio, progress } = getProgressInfo(item);
+          const { def, status } = item;
 
           return (
             <div
               key={def.id}
-              className={`flex flex-col gap-1.5 rounded-lg border p-2.5 transition-all ${
-                status === "unlocked"
-                  ? "border-[#d5a63d] bg-[#2a3a2a]/80 shadow-[0_0_8px_rgba(213,166,61,0.15)]"
-                  : status === "claimed"
-                    ? "border-[#304a38] bg-[#1d2b20]/60"
-                    : "border-[#303b47] bg-[#1d2530]/60"
-              }`}
+              className={`flex flex-col gap-1.5 rounded-lg border p-2.5 transition-all ${STATUS_CLASSES[status]}`}
             >
               <div className="flex items-center gap-1.5">
                 <span className="text-lg leading-none">{def.emoji}</span>

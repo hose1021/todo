@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { GameState, Habit, Plant, MAX_HABITS, MAX_PLANTS, XP_PER_COMPLETION } from "@/lib/types";
+import { GameState, Habit, Plant, MAX_HABITS, MAX_PLANTS, XP_PER_COMPLETION, MS_PER_DAY, TICK_INTERVAL_MS, MAX_GROWTH_LEVEL } from "@/lib/types";
 import { addXP, getPlantGrowth } from "@/lib/gameLogic";
 import { getPlantType, GROWTH_LEVELS } from "@/lib/plants";
-import { playPlantSound, playCompleteSound, playDeleteSound, playLevelUpSound, setMuted } from "@/lib/sound";
+import { useSound } from "@/lib/sound";
 import { ACHIEVEMENTS, evaluateAchievements, initAchievementStates } from "@/lib/achievements";
 import {
   fetchGameState,
@@ -14,8 +14,7 @@ import {
   saveAchievements,
   updateUsername,
 } from "@/lib/supabase";
-
-const MUTE_KEY = "habbittodo_mute";
+import { getDailyResetState } from "@/hooks/useDailyReset";
 
 function getToday(): string {
   const d = new Date();
@@ -23,7 +22,7 @@ function getToday(): string {
 }
 
 function getYesterday(): string {
-  const d = new Date(Date.now() - 86400000);
+  const d = new Date(Date.now() - MS_PER_DAY);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
@@ -46,29 +45,34 @@ function findEmptySlot(plants: (Plant | null)[]): number {
   return -1;
 }
 
+function saveStateChanges(uid: string, state: GameState): void {
+  Promise.all([
+    saveHabits(uid, state.habits),
+    syncUserStats(uid, {
+      xp: state.xp,
+      level: state.level,
+      crystals: state.crystals,
+      streak: state.streak,
+      lastCompletionDate: state.lastCompletionDate,
+      lastResetDate: state.lastResetDate,
+    }),
+    saveAchievements(uid, state.achievements),
+  ]).catch(() => {});
+}
+
 export function useCloudState(uid: string) {
   const [state, setState] = useState<GameState>(initialState);
   const [loaded, setLoaded] = useState(false);
   const [levelUp, setLevelUp] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   const [fetchVersion, setFetchVersion] = useState(0);
-
-  useEffect(() => {
-    const savedMute = localStorage.getItem(MUTE_KEY);
-    if (savedMute === "true") {
-      setIsMuted(true);
-      setMuted(true);
-    }
-  }, []);
-
-  const toggleMute = useCallback(() => {
-    setIsMuted((prev) => {
-      const next = !prev;
-      localStorage.setItem(MUTE_KEY, String(next));
-      setMuted(next);
-      return next;
-    });
-  }, []);
+  const {
+    isMuted,
+    toggleMute,
+    playPlantSound,
+    playCompleteSound,
+    playDeleteSound,
+    playLevelUpSound,
+  } = useSound();
 
   useEffect(() => {
     if (!uid) return;
@@ -90,27 +94,12 @@ export function useCloudState(uid: string) {
   useEffect(() => {
     const interval = setInterval(() => {
       setState((s) => {
-        const today = getToday();
-        if (s.lastResetDate === today) return { ...s };
-        const newState = {
-          ...s,
-          lastResetDate: today,
-          habits: s.habits.map((h) =>
-            h.isDaily ? { ...h, completions: 0 } : h
-          ),
-        };
-        saveHabits(uid, newState.habits).catch(() => {});
-        syncUserStats(uid, {
-          xp: newState.xp,
-          level: newState.level,
-          crystals: newState.crystals,
-          streak: newState.streak,
-          lastCompletionDate: newState.lastCompletionDate,
-          lastResetDate: newState.lastResetDate,
-        }).catch(() => {});
+        const newState = getDailyResetState(s);
+        if (!newState) return { ...s };
+        saveStateChanges(uid, newState);
         return newState;
       });
-    }, 30000);
+    }, TICK_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [uid]);
 
@@ -125,8 +114,7 @@ export function useCloudState(uid: string) {
     };
     const newState = evaluateAchievements({ ...state, habits: [...state.habits, habit] });
     setState(newState);
-    saveHabits(uid, newState.habits).catch(() => {});
-    saveAchievements(uid, newState.achievements).catch(() => {});
+    saveStateChanges(uid, newState);
     return true;
   }, [state, uid]);
 
@@ -156,16 +144,7 @@ export function useCloudState(uid: string) {
         try { navigator.vibrate?.(10); } catch { /* not supported */ }
       }
       const newState = evaluateAchievements({ ...s, habits, xp: updated.xp, level: updated.level, streak, lastCompletionDate });
-      saveHabits(uid, newState.habits).catch(() => {});
-      syncUserStats(uid, {
-        xp: newState.xp,
-        level: newState.level,
-        crystals: newState.crystals,
-        streak: newState.streak,
-        lastCompletionDate: newState.lastCompletionDate,
-        lastResetDate: newState.lastResetDate,
-      }).catch(() => {});
-      saveAchievements(uid, newState.achievements).catch(() => {});
+      saveStateChanges(uid, newState);
       return newState;
     });
   }, [uid]);
@@ -226,15 +205,7 @@ export function useCloudState(uid: string) {
       succeeded = true;
       const newState = evaluateAchievements({ ...s, plants, crystals: s.crystals - def.cost });
       savePlantAtSlot(uid, slotIndex, plant).catch(() => {});
-      syncUserStats(uid, {
-        xp: newState.xp,
-        level: newState.level,
-        crystals: newState.crystals,
-        streak: newState.streak,
-        lastCompletionDate: newState.lastCompletionDate,
-        lastResetDate: newState.lastResetDate,
-      }).catch(() => {});
-      saveAchievements(uid, newState.achievements).catch(() => {});
+      saveStateChanges(uid, newState);
       return newState;
     });
     return succeeded;
@@ -246,7 +217,7 @@ export function useCloudState(uid: string) {
     setState((s) => {
       const plant = s.plants[slotIndex];
       if (!plant) return s;
-      if (plant.growthLevel >= 3) return s;
+      if (plant.growthLevel >= MAX_GROWTH_LEVEL) return s;
 
       const growth = getPlantGrowth(plant);
       if (growth.isGrowing) return s;
@@ -266,15 +237,7 @@ export function useCloudState(uid: string) {
       succeeded = true;
       const newState = evaluateAchievements({ ...s, plants, crystals: s.crystals - cost });
       savePlantAtSlot(uid, slotIndex, upgradedPlant).catch(() => {});
-      syncUserStats(uid, {
-        xp: newState.xp,
-        level: newState.level,
-        crystals: newState.crystals,
-        streak: newState.streak,
-        lastCompletionDate: newState.lastCompletionDate,
-        lastResetDate: newState.lastResetDate,
-      }).catch(() => {});
-      saveAchievements(uid, newState.achievements).catch(() => {});
+      saveStateChanges(uid, newState);
       return newState;
     });
     return succeeded;
@@ -297,15 +260,7 @@ export function useCloudState(uid: string) {
       playDeleteSound();
       const newState = evaluateAchievements({ ...s, plants, crystals: s.crystals + refund });
       savePlantAtSlot(uid, slotIndex, null).catch(() => {});
-      syncUserStats(uid, {
-        xp: newState.xp,
-        level: newState.level,
-        crystals: newState.crystals,
-        streak: newState.streak,
-        lastCompletionDate: newState.lastCompletionDate,
-        lastResetDate: newState.lastResetDate,
-      }).catch(() => {});
-      saveAchievements(uid, newState.achievements).catch(() => {});
+      saveStateChanges(uid, newState);
       return newState;
     });
     return true;
@@ -344,15 +299,7 @@ export function useCloudState(uid: string) {
         }
       }
 
-      syncUserStats(uid, {
-        xp: newState.xp,
-        level: newState.level,
-        crystals: newState.crystals,
-        streak: newState.streak,
-        lastCompletionDate: newState.lastCompletionDate,
-        lastResetDate: newState.lastResetDate,
-      }).catch(() => {});
-      saveAchievements(uid, newState.achievements).catch(() => {});
+      saveStateChanges(uid, newState);
       if (plantedSlot >= 0) {
         const plant = newState.plants[plantedSlot];
         if (plant) savePlantAtSlot(uid, plantedSlot, plant).catch(() => {});
