@@ -4,7 +4,7 @@
 
 Next.js 16 (Turbopack default) + React 19 + TypeScript 6 + Tailwind CSS 4. Static export (`output: "export"`) — no server at runtime.
 Single client-side page with auth gate. Supabase for cloud persistence, auth, and leaderboard (4 tables, RLS). Russian-language UI. Inter font via `next/font/google`.
-shadcn/ui (`Sheet`, `Popover`, `Button`) via `@base-ui/react`. `components.json` is the shadcn config.
+shadcn/ui (`Sheet`, `Popover`, `Button`, `Dialog`) via `@base-ui/react`. `components.json` is the shadcn config.
 Package manager: `bun` (`bun.lock` committed). `npm run <script>` also works.
 
 ## Commands
@@ -20,15 +20,28 @@ npx tsc --noEmit      # typecheck (no separate check script)
 
 ## Environment variables
 
-All three are `NEXT_PUBLIC_*` (bundled into the static export at build time). `.env` and `.env.local` are gitignored.
+All are `NEXT_PUBLIC_*` (bundled into the static export at build time). `.env` and `.env.local` are gitignored.
 
-- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — Supabase publishable key
+- `NEXT_PUBLIC_ENV` — set to `"development"` for fully local development (no Supabase, no auth). Omit for production.
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL (not needed when `NEXT_PUBLIC_ENV=development`)
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — Supabase publishable key (not needed when `NEXT_PUBLIC_ENV=development`)
 - `NEXT_PUBLIC_SUPABASE_JWT_SECRET` — HS256 secret for custom JWT signing (client-side; used for RLS)
 
 Database schema: `sql/schema.sql` — run once in Supabase SQL Editor to create tables, indexes, RLS policies, and the `auth_user` RPC.
 
 CI deploy (`.github/workflows/deploy.yml`): these vars must be set as **GitHub Secrets** in the repo. Without them, the app builds but Supabase calls fail at runtime.
+
+### Development mode
+
+When `NEXT_PUBLIC_ENV=development` is set in `.env.local`:
+
+- Uses `useGameState` (localStorage) instead of `useCloudState` (Supabase) — **zero server calls**
+- Auth gate is skipped — auto-logged-in, no login screen
+- Leaderboard and logout buttons are hidden
+- `setUsername` and `refreshState` are no-ops
+- Data is stored under `habbittodo_save` in localStorage
+
+This completely isolates local development from the production Supabase database.
 
 ## Architecture
 
@@ -39,7 +52,7 @@ src/
 │   ├── page.tsx          # single page, wires everything, bottom nav on mobile
 │   └── globals.css       # @import 'tailwindcss' + @theme (custom keyframes) + @layer base (dark theme, scrollbar, body)
 ├── components/
-│   ├── ui/               # shadcn wrappers: button.tsx, popover.tsx, sheet.tsx
+│   ├── ui/               # shadcn wrappers: button.tsx, popover.tsx, sheet.tsx, dialog.tsx
 │   ├── Garden.tsx        # 6×6 grid (MAX_PLANTS=36), long-press select, Popover (desktop) / Sheet (mobile) detail
 │   ├── Plant.tsx          # emoji-only (🌱 sprout while growing, plant emoji when grown), scale/saturate per level
 │   ├── HabitList.tsx      # swipe-right=complete, swipe-left=delete, rename, toggle daily (↻), 3 sort modes
@@ -53,6 +66,7 @@ src/
 │   ├── LeaderboardPanel.tsx # leaderboard from Supabase, view other players
 │   └── UserGarden.tsx     # view another player's garden (read-only 6×6 grid)
 ├── hooks/
+│   ├── useAppState.ts     # unified hook: picks useGameState (dev) or useCloudState (prod) based on NEXT_PUBLIC_ENV
 │   ├── useCloudState.ts  # primary state hook (Supabase-backed), same API as useGameState
 │   ├── useAuth.ts        # secret key + name auth, JWT session management
 │   └── useGameState.ts    # kept for migrateIfNeeded() — converts old local saves to current format
@@ -78,7 +92,7 @@ sql/
 - `turbopack.root` should be set to `import.meta.dirname` in `next.config.mjs` to avoid lockfile detection warnings when `package-lock.json` exists in a parent directory.
 - `vitest.config.ts`: aliases `@` → `./src` matching tsconfig paths.
 - Tailwind 4 uses `@tailwindcss/postcss` in `postcss.config.mjs` (not `tailwindcss`). No `autoprefixer` needed.
-- shadcn init overwrites `globals.css` — restore to `@import "tailwindcss"` + `@theme` block. Do NOT import `tw-animate-css` or `shadcn/tailwind.css` (Tailwind 4 incompatible), even though `tw-animate-css` is in `package.json` (pulled by shadcn init).
+- shadcn init overwrites `globals.css` — restore to `@import "tailwindcss"` + `@import "tw-animate-css"` + `@theme inline` (radius vars) + `@theme` (custom keyframes) + `@layer base`. `tw-animate-css` v1.x is Tailwind 4 compatible.
 - `package.json` contains `shadcn` CLI. To add shadcn components: `npx shadcn add <name>`.
 - `next-env.d.ts` is auto-generated — it flips between `.next/dev/types/routes.d.ts` (after `dev`) and `.next/types/routes.d.ts` (after `build`). Ignore the churn; both are correct.
 
@@ -86,7 +100,7 @@ sql/
 
 - `@/*` → `./src/*` (tsconfig paths + vitest). Import order: `@/lib/*`, `@/hooks/*`, `@/components/*`.
 - `layout.tsx` is the ONLY server component. Everything else is `"use client"`.
-- `useCloudState` is the primary state owner for logged-in users — same API as `useGameState` but persists to Supabase. `useGameState` only used for `migrateIfNeeded()` (local→cloud migration).
+- `useAppState` is the single entry point for state. It delegates to `useCloudState` (Supabase) in production and `useGameState` (localStorage) in development. `useGameState` is also used for `migrateIfNeeded()` (local→cloud migration).
 - `next/image` is NOT used — all plants are emoji strings.
 - `GardenCell` is a `<div role="button" tabIndex={-1}>` (NOT `<button>`) — avoids nesting inside `PopoverTrigger`'s `<button>`.
 - Supabase client is **lazy-initialized** via `getSupabase()` — NOT a module-level `createClient()` call. This prevents SSR/prerender crashes in CI builds where env vars are missing. All DB calls go through `getSupabase()`, never a bare `supabase` export.

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { useCloudState } from "@/hooks/useCloudState";
+import { useAppState } from "@/hooks/useAppState";
 import Garden from "@/components/Garden";
 import HabitList from "@/components/HabitList";
 import AddHabitForm from "@/components/AddHabitForm";
@@ -26,9 +25,6 @@ import {
 } from "@/lib/supabase";
 
 export default function Home() {
-  const { status, uid, login, logout } = useAuth();
-  const cloudState = useCloudState(uid || "");
-
   const {
     state,
     xp,
@@ -53,7 +49,12 @@ export default function Home() {
     claimAchievement,
     setUsername,
     toggleMute,
-  } = cloudState;
+    status,
+    uid,
+    login,
+    logout,
+    isOnline,
+  } = useAppState();
 
   const { showHelp, ready, open: openHelp, close: closeHelp } = useHelpModal();
 
@@ -258,20 +259,24 @@ export default function Home() {
             >
               {isMuted ? "🔇" : "🔊"}
             </button>
-            <button
-              onClick={() => setShowLeaderboard(true)}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#3a4653] bg-[#242f3a]/90 text-base text-[#d5a63d] hover:bg-[#2d3a47] transition-colors shadow-lg shadow-black/20"
-              title="Таблица лидеров"
-            >
-              🏆
-            </button>
-            <button
-              onClick={logout}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#543a3a] bg-[#3a2a2a]/50 text-sm text-[#887777] hover:bg-[#3a2a2a] hover:text-[#ff8d8d] transition-colors shadow-lg shadow-black/20"
-              title="Выйти"
-            >
-              🚪
-            </button>
+            {isOnline && (
+              <button
+                onClick={() => setShowLeaderboard(true)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#3a4653] bg-[#242f3a]/90 text-base text-[#d5a63d] hover:bg-[#2d3a47] transition-colors shadow-lg shadow-black/20"
+                title="Таблица лидеров"
+              >
+                🏆
+              </button>
+            )}
+            {isOnline && (
+              <button
+                onClick={logout}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#543a3a] bg-[#3a2a2a]/50 text-sm text-[#887777] hover:bg-[#3a2a2a] hover:text-[#ff8d8d] transition-colors shadow-lg shadow-black/20"
+                title="Выйти"
+              >
+                🚪
+              </button>
+            )}
           </div>
         </div>
         <div className="mx-auto max-w-4xl px-2 pb-2 sm:hidden">

@@ -61,7 +61,7 @@ export function migrateIfNeeded(state: GameState): GameState {
 
   if (Array.isArray(raw.inventory)) {
     const inventory = (raw.inventory as Record<string, unknown>[]).map(migratePlant);
-    const plants = state.plants.map((p) => p ? migratePlant(p as unknown as Record<string, unknown>) : null);
+    const plants = (state.plants ?? []).map((p) => p ? migratePlant(p as unknown as Record<string, unknown>) : null);
     result = {
       ...state,
       crystals: state.crystals ?? 0,
@@ -79,7 +79,7 @@ export function migrateIfNeeded(state: GameState): GameState {
       }
     }
   } else {
-    const oldHabits = state.habits as unknown as (Habit & { plantVariant?: number; color?: string })[];
+    const oldHabits = (state.habits ?? []) as unknown as (Habit & { plantVariant?: number; color?: string })[];
     const hasOldFormat = oldHabits.some((h) => h !== null && typeof h === "object" && (h as Habit & { plantVariant?: number }).plantVariant !== undefined);
 
     if (hasOldFormat) {
@@ -116,11 +116,11 @@ export function migrateIfNeeded(state: GameState): GameState {
         lastResetDate: getToday(),
       };
     } else {
-      result.plants = state.plants.map((p) => p ? migratePlant(p as unknown as Record<string, unknown>) : null);
+      result.plants = (state.plants ?? []).map((p) => p ? migratePlant(p as unknown as Record<string, unknown>) : null);
     }
   }
 
-  result.habits = result.habits.map((h) => ({
+  result.habits = (result.habits ?? []).map((h) => ({
     ...h,
     isDaily: h.isDaily ?? false,
   }));
