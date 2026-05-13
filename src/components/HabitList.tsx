@@ -2,8 +2,15 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Habit } from "@/lib/types";
-import { XP_PER_COMPLETION, MAX_HABITS } from "@/lib/types";
+import { XP_PER_COMPLETION, MAX_HABITS, DAY_LABELS } from "@/lib/types";
 import { useHabitSwipe } from "@/hooks/useHabitSwipe";
+import { ChartTrigger } from "./HabitChart";
+import { IconArrowBackUp } from "@tabler/icons-react";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 
 type SortMode = "created" | "name" | "completions";
 
@@ -14,7 +21,9 @@ interface HabitListProps {
   onComplete: (id: string) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, newName: string) => boolean;
-  onToggleDaily: (id: string) => void;
+  onSetActiveDays: (id: string, activeDays: number[]) => void;
+  onReset: (id: string) => void;
+  onChartOpen: (habit: Habit) => void;
   onAddHabit?: () => void;
   habitsFull?: boolean;
 }
@@ -26,7 +35,9 @@ export default function HabitList({
   onComplete,
   onDelete,
   onRename,
-  onToggleDaily,
+  onSetActiveDays,
+  onReset,
+  onChartOpen,
   onAddHabit,
   habitsFull,
 }: HabitListProps) {
@@ -35,6 +46,7 @@ export default function HabitList({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("created");
   const [floats, setFloats] = useState<Record<string, boolean>>({});
+  const [undoingId, setUndoingId] = useState<string | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -80,14 +92,16 @@ export default function HabitList({
       setFloats((float) => ({ ...float, [id]: true }));
       setTimeout(
         () =>
-          setFloats((f) => {
-            const next = { ...f };
+          setFloats((float) => {
+            const next = { ...float };
             delete next[id];
             return next;
           }),
         1200,
       );
       onComplete(id);
+      setUndoingId(id);
+      setTimeout(() => setUndoingId(null), 4000);
     },
     [onComplete],
   );
@@ -156,13 +170,19 @@ export default function HabitList({
               onSubmitRename={submitRename}
               onCancelEdit={cancelEdit}
               onComplete={() => completeWithFloat(habit.id)}
-              onToggleDaily={() => onToggleDaily(habit.id)}
+              onSetActiveDays={(days) => onSetActiveDays(habit.id, days)}
+              onReset={() => {
+                onReset(habit.id);
+                setUndoingId(null);
+              }}
               onDelete={() => {
                 onDelete(habit.id);
                 setConfirmDeleteId(null);
               }}
               onConfirmDelete={() => setConfirmDeleteId(habit.id)}
               onCancelDelete={() => setConfirmDeleteId(null)}
+              onChartOpen={() => onChartOpen(habit)}
+              isUndoing={undoingId === habit.id}
             />
           );
         })}
@@ -200,10 +220,13 @@ interface HabitRowProps {
   onSubmitRename: () => void;
   onCancelEdit: () => void;
   onComplete: () => void;
-  onToggleDaily: () => void;
+  onSetActiveDays: (days: number[]) => void;
+  onReset: () => void;
   onDelete: () => void;
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
+  onChartOpen: () => void;
+  isUndoing?: boolean;
 }
 
 function HabitRow({
@@ -220,16 +243,21 @@ function HabitRow({
   onSubmitRename,
   onCancelEdit,
   onComplete,
-  onToggleDaily,
+  onSetActiveDays,
+  onReset,
   onDelete,
   onConfirmDelete,
   onCancelDelete,
+  onChartOpen,
+  isUndoing,
 }: HabitRowProps) {
   const { swiped, handleTouchStart, handleTouchEnd } = useHabitSwipe({
     isDisabled: isEditing || isConfirming,
     onSwipeRight: onComplete,
     onSwipeLeft: onConfirmDelete,
   });
+
+  const [showDaysPopover, setShowDaysPopover] = useState(false);
 
   const SWIPE_CLASSES: Record<string, string> = {
     complete: "border-[#4CAF50] bg-[#2a4a3a]",
@@ -325,53 +353,111 @@ function HabitRow({
             </div>
             <div className="text-[11px] font-semibold text-[#697888]">
               {habit.completions} раз
-              {habit.isDaily && (
-                <span className="ml-1 inline-block rounded-sm bg-[#3a4a6e] px-1 py-px text-[10px] font-black text-[#8ab4f8]">
-                  день
+              {habit.activeDays.length > 0 && (
+                <span className="ml-1 inline-flex gap-0.5">
+                  {DAY_LABELS.map((label, i) => (
+                    <span
+                      key={i}
+                      className={
+                        habit.activeDays.includes(i)
+                          ? "text-[#8ab4f8]"
+                          : "text-[#3a4653]"
+                      }
+                    >
+                      {label}
+                    </span>
+                  ))}
                 </span>
               )}
             </div>
           </div>
 
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleDaily();
-            }}
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm transition-colors ${
-              habit.isDaily
-                ? "bg-[#3a4a6e] text-[#a8c8ff] hover:bg-[#4a5a7e]"
-                : "text-[#3a4653] hover:text-[#8795a4]"
-            }`}
-            title={habit.isDaily ? "Снять ежедневный" : "Сделать ежедневным"}
-          >
-            ↻
-          </button>
+          <ChartTrigger onClick={onChartOpen} />
 
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onComplete();
-            }}
-            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#31453e] text-[#a8e8bd] shadow-xs transition-all hover:bg-[#3f674d] active:scale-90"
-            title="Выполнить"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
+          <Popover open={showDaysPopover} onOpenChange={setShowDaysPopover}>
+            <PopoverTrigger>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDaysPopover(true);
+                }}
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm transition-colors ${
+                  habit.activeDays.length > 0
+                    ? "bg-[#3a4a6e] text-[#a8c8ff] hover:bg-[#4a5a7e]"
+                    : "text-[#3a4653] hover:text-[#8795a4]"
+                }`}
+                title="Расписание"
+              >
+                ↻
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-2">
+              <div className="flex gap-1">
+                {DAY_LABELS.map((label, i) => {
+                  const isActive = habit.activeDays.includes(i);
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const next = isActive
+                          ? habit.activeDays.filter((d) => d !== i)
+                          : [...habit.activeDays, i].sort();
+                        onSetActiveDays(next);
+                      }}
+                      className={`rounded-md px-2 py-1 text-[10px] font-black transition-all ${
+                        isActive
+                          ? "bg-[#d5a63d] text-[#1f2630]"
+                          : "bg-[#242f3a] text-[#596675] border border-[#3a4653]"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {isUndoing ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onReset();
+              }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#c0392b] text-white shadow-xs transition-all hover:bg-[#e74c3c] active:scale-90"
+              title="Отменить выполнение"
             >
-              <polyline points="3,8 7,12 13,4" />
-            </svg>
-            {floats[habit.id] && (
-              <span className="pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-black text-[#a8e8bd] animate-float-up">
-                +{XP_PER_COMPLETION} XP
-              </span>
-            )}
-          </button>
+              <IconArrowBackUp size={16} />
+            </button>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onComplete();
+              }}
+              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#31453e] text-[#a8e8bd] shadow-xs transition-all hover:bg-[#3f674d] active:scale-90"
+              title="Выполнить"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <polyline points="3,8 7,12 13,4" />
+              </svg>
+              {floats[habit.id] && (
+                <span className="pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-black text-[#a8e8bd] animate-float-up">
+                  +{XP_PER_COMPLETION} XP
+                </span>
+              )}
+            </button>
+          )}
 
           <span className="hidden w-10 shrink-0 text-right text-[11px] font-black text-[#d5a63d] sm:inline">
             +{XP_PER_COMPLETION} XP
