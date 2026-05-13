@@ -13,8 +13,10 @@ import AchievementPanel from "@/components/AchievementPanel";
 import LoginScreen from "@/components/LoginScreen";
 import LeaderboardPanel from "@/components/LeaderboardPanel";
 import UserGarden from "@/components/UserGarden";
+import HabitChart from "@/components/HabitChart";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 import { MAX_HABITS } from "@/lib/types";
+import type { Habit } from "@/lib/types";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { loadGame, clearGame } from "@/lib/storage";
 import { migrateIfNeeded } from "@/hooks/useGameState";
@@ -49,7 +51,8 @@ export default function Home() {
     completeHabit,
     deleteHabit,
     renameHabit,
-    toggleDailyHabit,
+    setHabitActiveDays,
+    resetHabit,
     plantDirectly,
     upgradePlant,
     removePlant,
@@ -81,6 +84,7 @@ export default function Home() {
   const [shopSheetSlot, setShopSheetSlot] = useState(0);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [viewUserUid, setViewUserUid] = useState<string | null>(null);
+  const [chartHabit, setChartHabit] = useState<Habit | null>(null);
 
   const claimableCount = achievements.filter(
     (a) => a.status === "unlocked",
@@ -125,6 +129,7 @@ export default function Home() {
     setShopSheetOpen(false);
     setShowLeaderboard(false);
     setViewUserUid(null);
+    setChartHabit(null);
   }, []);
 
   useKeyboardShortcuts({
@@ -300,7 +305,9 @@ export default function Home() {
           onComplete={completeHabit}
           onDelete={deleteHabit}
           onRename={renameHabit}
-          onToggleDaily={toggleDailyHabit}
+          onSetActiveDays={setHabitActiveDays}
+          onReset={resetHabit}
+          onChartOpen={setChartHabit}
           onAddHabit={() => setShowAddHabit(true)}
           habitsFull={habits.length >= MAX_HABITS}
         />
@@ -360,6 +367,16 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {chartHabit && (
+        <HabitChart
+          habit={chartHabit}
+          open={chartHabit !== null}
+          onOpenChange={(open) => {
+            if (!open) setChartHabit(null);
+          }}
+        />
+      )}
     </div>
   );
 }
