@@ -11,6 +11,12 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type SortMode = "created" | "name" | "completions";
 
@@ -258,6 +264,7 @@ function HabitRow({
   });
 
   const [showDaysPopover, setShowDaysPopover] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   const SWIPE_CLASSES: Record<string, string> = {
     complete: "border-[#4CAF50] bg-[#2a4a3a]",
@@ -272,8 +279,9 @@ function HabitRow({
   }`;
 
   return (
+    <>
     <div
-      onClick={onSelect}
+      onClick={() => setShowEditDialog(true)}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       className={rowClass}
@@ -480,5 +488,39 @@ function HabitRow({
         </>
       )}
     </div>
+
+    <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+      <DialogContent className="max-w-xs" showCloseButton={true}>
+        <DialogHeader>
+          <DialogTitle className="truncate text-base">{habit.name}</DialogTitle>
+        </DialogHeader>
+        <div className="flex gap-1 justify-center flex-wrap">
+          {DAY_LABELS.map((label, i) => {
+            const isActive = habit.activeDays.includes(i);
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const next = isActive
+                    ? habit.activeDays.filter((d) => d !== i)
+                    : [...habit.activeDays, i].sort();
+                  onSetActiveDays(next);
+                }}
+                className={`rounded-md px-3 py-1.5 text-xs font-black transition-all ${
+                  isActive
+                    ? "bg-[#d5a63d] text-[#1f2630]"
+                    : "bg-[#242f3a] text-[#596675] border border-[#3a4653]"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
