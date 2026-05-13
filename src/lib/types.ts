@@ -2,8 +2,9 @@ export interface Habit {
   id: string;
   name: string;
   completions: number;
+  completionHistory: string[];
   createdAt: number;
-  isDaily: boolean;
+  activeDays: number[];
 }
 
 export type RarityLevel = 1 | 2 | 3 | 4 | 5;
@@ -89,3 +90,5 @@ export const MS_PER_HOUR = 3600000;
 export const MS_PER_DAY = 86400000;
 export const TICK_INTERVAL_MS = 30000;
 export const LONG_PRESS_MS = 500;
+
+export const DAY_LABELS = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
