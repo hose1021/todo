@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { GameState, Habit, Plant, MAX_HABITS, MAX_PLANTS, XP_PER_COMPLETION, MS_PER_DAY, MS_PER_HOUR, TICK_INTERVAL_MS, MAX_GROWTH_LEVEL } from "@/lib/types";
 import { saveGame, loadGame } from "@/lib/storage";
-import { addXP, getPlantGrowth } from "@/lib/gameLogic";
+import { addXP, getPlantGrowth, getXPForLevel } from "@/lib/gameLogic";
 import { getPlantType, GROWTH_LEVELS } from "@/lib/plants";
 import { useSound } from "@/lib/sound";
 import { ACHIEVEMENTS, evaluateAchievements, initAchievementStates } from "@/lib/achievements";
@@ -109,8 +109,9 @@ function migrateOldHabitFormat(state: GameState): GameState | null {
         id: h.id,
         name: h.name,
         completions: h.completions ?? 0,
+        completionHistory: [],
         createdAt: h.createdAt ?? Date.now(),
-        isDaily: false,
+        activeDays: [],
       });
       if (h.plantVariant !== undefined && i < MAX_PLANTS) {
         newPlants[i] = {
@@ -142,10 +143,17 @@ function migratePlantsOnly(state: GameState): GameState {
 }
 
 function normalizeMigrationResult(result: GameState): GameState {
-  const habits = (result.habits ?? []).map((h) => ({
-    ...h,
-    isDaily: h.isDaily ?? false,
-  }));
+  const habits = (result.habits ?? []).map((h) => {
+    const raw = h as unknown as Record<string, unknown>;
+    return {
+      id: h.id,
+      name: h.name,
+      completions: h.completions ?? 0,
+      completionHistory: (raw.completionHistory ?? []) as string[],
+      createdAt: h.createdAt ?? Date.now(),
+      activeDays: raw.isDaily ? [0, 1, 2, 3, 4, 5, 6] : ((raw.activeDays ?? []) as number[]),
+    };
+  });
 
   let achievements = result.achievements;
   if (!achievements || !Array.isArray(achievements) || achievements.length === 0) {
@@ -205,7 +213,7 @@ export function useGameState() {
           ...s,
           lastResetDate: today,
           habits: s.habits.map((h) =>
-            h.isDaily ? { ...h, completions: 0 } : h
+            h.activeDays.includes(new Date().getDay()) ? { ...h, completions: 0 } : h
           ),
         };
       });
@@ -213,14 +221,15 @@ export function useGameState() {
     return () => clearInterval(interval);
   }, []);
 
-  const addHabit = useCallback((name: string) => {
+  const addHabit = useCallback((name: string, activeDays?: number[]) => {
     if (state.habits.length >= MAX_HABITS) return false;
     const habit: Habit = {
       id: crypto.randomUUID(),
       name: name.trim(),
       completions: 0,
+      completionHistory: [],
       createdAt: Date.now(),
-      isDaily: false,
+      activeDays: activeDays ?? [],
     };
     setState((s) => evaluateAchievements({ ...s, habits: [...s.habits, habit] }));
     return true;
@@ -229,9 +238,13 @@ export function useGameState() {
   const completeHabit = useCallback((id: string) => {
     setState((s) => {
       const today = getToday();
-      const habits = s.habits.map((h) =>
-        h.id === id ? { ...h, completions: h.completions + 1 } : h
-      );
+      const habits = s.habits.map((h) => {
+        if (h.id !== id) return h;
+        const history = h.completionHistory.includes(today)
+          ? h.completionHistory
+          : [...h.completionHistory, today];
+        return { ...h, completions: h.completions + 1, completionHistory: history };
+      });
       const updated = addXP(s.xp, s.level, XP_PER_COMPLETION);
       let { streak, lastCompletionDate } = s;
       if (today !== lastCompletionDate) {
@@ -267,13 +280,54 @@ export function useGameState() {
     return true;
   }, []);
 
-  const toggleDailyHabit = useCallback((id: string) => {
+  const setHabitActiveDays = useCallback((id: string, activeDays: number[]) => {
     setState((s) => ({
       ...s,
       habits: s.habits.map((h) =>
-        h.id === id ? { ...h, isDaily: !h.isDaily } : h
+        h.id === id ? { ...h, activeDays } : h
       ),
     }));
+  }, []);
+
+  const resetHabit = useCallback((id: string) => {
+    setState((s) => {
+      const today = getToday();
+      const targetHabit = s.habits.find((h) => h.id === id);
+      if (!targetHabit) return s;
+      if (!targetHabit.completionHistory.includes(today)) return s;
+
+      const lastIdx = targetHabit.completionHistory.lastIndexOf(today);
+      const newHistory = [
+        ...targetHabit.completionHistory.slice(0, lastIdx),
+        ...targetHabit.completionHistory.slice(lastIdx + 1),
+      ];
+
+      const habits = s.habits.map((h) => {
+        if (h.id !== id) return h;
+        return {
+          ...h,
+          completions: Math.max(0, h.completions - 1),
+          completionHistory: newHistory,
+        };
+      });
+
+      let { xp, level } = s;
+      xp = Math.max(0, xp - XP_PER_COMPLETION);
+      while (xp < 0 && level > 1) {
+        xp += getXPForLevel(level - 1);
+        level--;
+      }
+
+      let { streak } = s;
+      const hasTodayCompletion = habits.some(
+        (h) => h.completionHistory.includes(today),
+      );
+      if (!hasTodayCompletion && streak > 0) {
+        streak = Math.max(1, streak - 1);
+      }
+
+      return evaluateAchievements({ ...s, habits, xp, level, streak });
+    });
   }, []);
 
   const deleteHabit = useCallback((id: string) => {
@@ -406,7 +460,8 @@ export function useGameState() {
     completeHabit,
     deleteHabit,
     renameHabit,
-    toggleDailyHabit,
+    setHabitActiveDays,
+    resetHabit,
     plantDirectly,
     upgradePlant,
     removePlant,
