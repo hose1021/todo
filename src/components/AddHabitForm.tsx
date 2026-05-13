@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MAX_HABITS } from "@/lib/types";
+import { MAX_HABITS, DAY_LABELS } from "@/lib/types";
 
 interface AddHabitFormProps {
-  onAdd: (name: string) => boolean;
+  onAdd: (name: string, activeDays: number[]) => boolean;
   currentCount: number;
   embedded?: boolean;
   onClose?: () => void;
@@ -19,6 +19,7 @@ export default function AddHabitForm({
   const [open, setOpen] = useState(!embedded);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [activeDays, setActiveDays] = useState<number[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const isFull = currentCount >= MAX_HABITS;
 
@@ -39,7 +40,7 @@ export default function AddHabitForm({
       return;
     }
 
-    const ok = onAdd(trimmed);
+    const ok = onAdd(trimmed, activeDays);
 
     if (!ok) {
       setError("Слишком много привычек");
@@ -47,6 +48,7 @@ export default function AddHabitForm({
     }
 
     setName("");
+    setActiveDays([]);
     setError("");
     setOpen(false);
     onClose?.();
@@ -55,8 +57,17 @@ export default function AddHabitForm({
   const handleCancel = () => {
     setOpen(false);
     setName("");
+    setActiveDays([]);
     setError("");
     onClose?.();
+  };
+
+  const toggleDay = (dayIndex: number) => {
+    setActiveDays((prev) =>
+      prev.includes(dayIndex)
+        ? prev.filter((d) => d !== dayIndex)
+        : [...prev, dayIndex].sort()
+    );
   };
 
   if (!embedded && isFull) return null;
@@ -113,6 +124,26 @@ export default function AddHabitForm({
         >
           ✕
         </button>
+      </div>
+
+      <div className="mt-2 flex gap-1 flex-wrap">
+        {DAY_LABELS.map((label, i) => {
+          const isActive = activeDays.includes(i);
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => toggleDay(i)}
+              className={`rounded-md px-2 py-1 text-[10px] font-black transition-all ${
+                isActive
+                  ? "bg-[#d5a63d] text-[#1f2630]"
+                  : "bg-[#242f3a] text-[#596675] border border-[#3a4653]"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {error && (
