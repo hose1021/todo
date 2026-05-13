@@ -375,22 +375,16 @@ function HabitRow({
           <ChartTrigger onClick={onChartOpen} />
 
           <Popover open={showDaysPopover} onOpenChange={setShowDaysPopover}>
-            <PopoverTrigger>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowDaysPopover(true);
-                }}
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm transition-colors ${
-                  habit.activeDays.length > 0
-                    ? "bg-[#3a4a6e] text-[#a8c8ff] hover:bg-[#4a5a7e]"
-                    : "text-[#3a4653] hover:text-[#8795a4]"
-                }`}
-                title="Расписание"
-              >
-                ↻
-              </button>
+            <PopoverTrigger
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm transition-colors ${
+                habit.activeDays.length > 0
+                  ? "bg-[#3a4a6e] text-[#a8c8ff] hover:bg-[#4a5a7e]"
+                  : "text-[#3a4653] hover:text-[#8795a4]"
+              }`}
+              title="Расписание"
+            >
+              ↻
             </PopoverTrigger>
             <PopoverContent className="w-auto p-2">
               <div className="flex gap-1">
