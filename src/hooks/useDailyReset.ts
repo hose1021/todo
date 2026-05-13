@@ -8,11 +8,12 @@ function getToday(): string {
 export function getDailyResetState(state: GameState): GameState | null {
   const today = getToday();
   if (state.lastResetDate === today) return null;
+  const dayOfWeek = new Date().getDay();
   return {
     ...state,
     lastResetDate: today,
     habits: state.habits.map((h) =>
-      h.isDaily ? { ...h, completions: 0 } : h
+      h.activeDays.includes(dayOfWeek) ? { ...h, completions: 0 } : h
     ),
   };
 }
