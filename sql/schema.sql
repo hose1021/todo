@@ -28,7 +28,8 @@ CREATE TABLE public.habits (
   user_uid UUID NOT NULL REFERENCES public.users(uid) ON DELETE CASCADE,
   name TEXT NOT NULL,
   completions INTEGER NOT NULL DEFAULT 0,
-  is_daily BOOLEAN NOT NULL DEFAULT FALSE,
+  completion_history JSONB NOT NULL DEFAULT '[]'::jsonb,
+  active_days SMALLINT[] NOT NULL DEFAULT '{}'::smallint[],
   created_at BIGINT NOT NULL
 );
 
