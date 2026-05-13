@@ -66,7 +66,8 @@ interface HabitRow {
   user_uid: string;
   name: string;
   completions: number;
-  is_daily: boolean;
+  completion_history: string[];
+  active_days: number[];
   created_at: number;
 }
 
@@ -90,8 +91,9 @@ function rowToHabit(row: HabitRow): Habit {
     id: row.id,
     name: row.name,
     completions: row.completions,
+    completionHistory: row.completion_history ?? [],
     createdAt: row.created_at,
-    isDaily: row.is_daily,
+    activeDays: row.active_days ?? [],
   };
 }
 
@@ -192,7 +194,8 @@ export async function saveHabits(uid: string, habits: Habit[]): Promise<void> {
     user_uid: uid,
     name: h.name,
     completions: h.completions,
-    is_daily: h.isDaily,
+    completion_history: h.completionHistory,
+    active_days: h.activeDays,
     created_at: h.createdAt,
   }));
 
